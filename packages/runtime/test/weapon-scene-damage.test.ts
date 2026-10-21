@@ -14,6 +14,7 @@ function sceneWorld(opts: {
   traceActor?: WeaponActor | null;
   targets?: WeaponSceneTarget[];
   blockedExcept?: (from: readonly number[], to: readonly number[], nodeId: string) => boolean;
+  blockedAlways?: boolean;
 } = {}) {
   const sceneHits: { nodeId: string; kind: string; damage: number }[] = [];
   const actorHits: number[] = [];
@@ -24,7 +25,7 @@ function sceneWorld(opts: {
       ? { actor: opts.traceActor, distance: 4, point: [4, 1, 0], kind: 'entity', normal: [0, 0, 1] }
       : { actor: null, distance: 4, point: [4, 1, 0], kind: 'scene', nodeId: 'nd_crate',
           surface: { nodeId: 'nd_crate', distance: 4, point: [4, 1, 0], normal: [0, 0, 1] }, normal: [0, 0, 1] },
-    blocked: () => false,
+    blocked: () => opts.blockedAlways ?? false,
     blockedExcept: (from, to, nodeId) => opts.blockedExcept?.(from, to, nodeId) ?? false,
     damage: (id) => { actorHits.push(id); return 1; },
     displace: () => {},
@@ -73,5 +74,25 @@ describe('WU-06 武器事实链 → 场景可破坏目标', () => {
       [0, 1, 0], [1, 0, 0], 8, 3, world);
     expect(sceneHits).toHaveLength(3);
     expect(sceneHits.every((h) => h.nodeId === 'nd_crate' && h.kind === 'direct')).toBe(true);
+  });
+
+  it('范围武器只忽略目标自身 collider；墙后目标仍被遮挡', () => {
+    const { world, sceneHits } = sceneWorld({
+      targets: [{ nodeId: 'nd_crate', position: [2, 0.5, 0], radius: 0.6 }],
+      blockedAlways: true,
+      blockedExcept: () => false,
+    });
+    new WeaponCombat(7).fire(weapon({ behavior: 'flame', rangeM: 5, damage: 6 }),
+      [0, 1, 0], [1, 0, 0], 6, 3, world);
+    expect(sceneHits).toEqual([{ nodeId: 'nd_crate', kind: 'burn', damage: 6 }]);
+
+    const behind = sceneWorld({
+      targets: [{ nodeId: 'nd_behind', position: [2, 0.5, 0], radius: 0.6 }],
+      blockedAlways: true,
+      blockedExcept: () => true,
+    });
+    new WeaponCombat(7).fire(weapon({ behavior: 'flame', rangeM: 5, damage: 6 }),
+      [0, 1, 0], [1, 0, 0], 6, 3, behind.world);
+    expect(behind.sceneHits).toEqual([]);
   });
 });

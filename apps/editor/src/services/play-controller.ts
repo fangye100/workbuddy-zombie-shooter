@@ -325,21 +325,39 @@ export class PlayController {
     if (rt === null) return;
     this.pendingDestructibleEvents.push(...rt.takeDestructibleEvents());
     if (this.pendingDestructibleEvents.length === 0) return;
-    // 碎片运行时尚未就绪时保留事实，下一次 update 再试；不重复破坏。
-    if (this.fractureBinding === null || this.fractureBinding.backend() === null) return;
-    for (const ev of this.pendingDestructibleEvents.splice(0)) {
+    const queue = this.pendingDestructibleEvents;
+    this.pendingDestructibleEvents = [];
+    const binding = this.fractureBinding;
+    for (const ev of queue) {
       if (ev.target.kind !== 'scene-object') continue;
       const nodeId = ev.target.nodeId;
-      this.brokenNodes.add(nodeId);
-      const index = this.renderer.findObjectIndexByNodeId(nodeId);
-      if (index !== null) this.renderer.setObjectVisible(index, false);
-      const graph = this.runtimeGraphWithoutBroken();
-      if (graph !== null) this.fractureBinding.syncScene(graph);
+      // 表现切换先于后端就绪：玩法事实成立时完整对象必须立即不可见，且物理镜像同步移除。
+      if (!this.brokenNodes.has(nodeId)) {
+        this.brokenNodes.add(nodeId);
+        const index = this.renderer.findObjectIndexByNodeId(nodeId);
+        if (index !== null) this.renderer.setObjectVisible(index, false);
+        const graph = this.runtimeGraphWithoutBroken();
+        if (graph !== null) binding?.syncScene(graph);
+      }
+      if (binding === null || binding.backend() === null) {
+        this.pendingDestructibleEvents.push(ev);
+        this.lastDestructibleError = nodeId + '：碎片运行时未就绪（等待重试）';
+        continue;
+      }
+      if (binding.failure !== null) {
+        this.lastDestructibleError = nodeId + '：碎片运行时不可用（' + binding.failure.stage + ' — ' + binding.failure.detail + '）';
+        console.warn('[fracture] ' + this.lastDestructibleError);
+        continue;
+      }
       void this.spawnFracture(ev).then((r) => {
         if (!r.accepted) {
           const rej = r.rejection;
+          // Reset/Stop 造成的旧代取消是预期取消，不是用户可见的破坏表现失败。
+          if (rej !== null && rej.reason === 'session-closed') return;
           this.lastDestructibleError = nodeId + '：' + (rej === null ? 'fracture-rejected' : rej.reason + ' — ' + rej.detail);
           console.warn('[fracture] ' + this.lastDestructibleError);
+        } else if (this.lastDestructibleError?.startsWith(nodeId + '：碎片运行时未就绪')) {
+          this.lastDestructibleError = null;
         }
       });
     }

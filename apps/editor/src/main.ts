@@ -431,6 +431,7 @@ async function boot(): Promise<void> {
    * 每帧刷同一条告警会把真正重要的那条冲掉（WebGPU 错误那条踩过同样的坑）。
    */
   const shownRuntimeDiags = new Set<string>();
+  let lastDestructibleErrorShown: string | null = null;
   function drainRuntimeDiagnostics(): void {
     for (const d of playCtl.runtimeDiagnostics) {
       const key = `${d.code}|${d.nodeId ?? ''}`;
@@ -441,6 +442,17 @@ async function boot(): Promise<void> {
       editorMenu.message(spawnMsg.text);
       refreshSpawnPanel();
       hudDirty = true;
+    }
+    // 破坏表现失败必须有可见保底反馈：玩法事实不回滚，但用户要看到诊断。
+    const destructibleError = playCtl.destructibleError;
+    if (destructibleError !== lastDestructibleErrorShown) {
+      lastDestructibleErrorShown = destructibleError;
+      if (destructibleError !== null) {
+        spawnMsg = { text: '破坏表现失败：' + destructibleError, kind: 'warn' };
+        editorMenu.message(spawnMsg.text);
+        refreshSpawnPanel();
+        hudDirty = true;
+      }
     }
   }
   // stopPlay 而不是 playCtl.stop()：退出 Play 后要顺带定位到选中实体的来源刷怪点

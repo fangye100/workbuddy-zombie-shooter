@@ -561,6 +561,10 @@ describe('RuntimeSession —— W06 可破坏物体状态', () => {
     expect(events[0]!.target.kind).toBe('scene-object');
     expect((events[0]!.target as { nodeId: string }).nodeId).toBe('nd_crate');
     expect(events[0]!.source.hitSequence).toBe(91);
+    expect(Object.isFrozen(events[0])).toBe(true);
+    expect(Object.isFrozen(events[0]!.target)).toBe(true);
+    expect(events[0]!.normal).toEqual([0, 0, 1]);
+    expect(events[0]!.impulse).not.toBeNull();
     expect(events[0]!.position).toEqual([0, 0.5, 0]);
     expect(events[0]!.rotation).toEqual([0, 0, 0, 1]);
     expect(events[0]!.contact).toEqual([0, 0.6, 0]);

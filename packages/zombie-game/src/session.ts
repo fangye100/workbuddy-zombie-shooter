@@ -40,7 +40,7 @@ import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
 import { WeaponSystem } from "@aether/runtime";
 import { WeaponCombat, type WeaponWorld,type WeaponDamageFacts, type FractureEvent,
-  type WeaponSceneDamageKind, type WeaponSceneTarget } from "@aether/runtime";
+  type WeaponSceneDamageKind, type WeaponSceneTarget, frozenFractureEvent } from "@aether/runtime";
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -391,6 +391,7 @@ export class RuntimeSession {
   private readonly destructibleStates = new Map<NodeId,{desc:DestructibleDesc;hp:number;broken:boolean}>();
   private destructibleEventBuf: FractureEvent[] = [];
   private destructibleSeq = 0;
+  private sceneHitSeq = 0;
   private liveSolids:readonly SolidColliderDesc[]=[];
   gateSnapshot(){return this.navigationGates.snapshot();}
   setGateOpen(nodeId:NodeId,open:boolean):void {
@@ -409,7 +410,8 @@ export class RuntimeSession {
       if(s.broken)continue;
       const b=s.desc.bounds;
       out.push({nodeId:s.desc.nodeId,position:[b.x,(b.minY+b.maxY)/2,b.z],
-        radius:Math.max(b.halfX,b.halfZ,Math.max(0,(b.maxY-b.minY)/2))});
+        radius:Math.max(b.halfX,b.halfZ,Math.max(0,(b.maxY-b.minY)/2)),
+        minX:b.x-b.halfX,maxX:b.x+b.halfX,minY:b.minY,maxY:b.maxY,minZ:b.z-b.halfZ,maxZ:b.z+b.halfZ});
     }
     return out;
   }
@@ -427,6 +429,13 @@ export class RuntimeSession {
     let h=2166136261;for(let i=0;i<nodeId.length;i++)h=Math.imul(h^nodeId.charCodeAt(i),16777619);
     const seq=++this.destructibleSeq;
     const contact:[number,number,number]=point?[point[0],point[1],point[2]]:[b.x,(b.minY+b.maxY)/2,b.z];
+    const center:[number,number,number]=[b.x,(b.minY+b.maxY)/2,b.z];
+    let n:[number,number,number]=normal?[normal[0],normal[1],normal[2]]:[0,1,0];
+    if(!normal){
+      const dx=center[0]-contact[0],dy=center[1]-contact[1],dz=center[2]-contact[2],l=Math.hypot(dx,dy,dz);
+      if(l>1e-6)n=[dx/l,dy/l,dz/l];
+    }
+    const impulse:[number,number,number]=[n[0]*applied*0.1,n[1]*applied*0.1,n[2]*applied*0.1];
     const ev:FractureEvent={
       sequence:seq,tick:this.tickCount,seed:(this.seed^(h>>>0))>>>0,
       profile:{path:d.profile.path,guid:d.profile.guid},
@@ -434,11 +443,11 @@ export class RuntimeSession {
       position:[d.position[0],d.position[1],d.position[2]],
       rotation:[d.rotation[0],d.rotation[1],d.rotation[2],d.rotation[3]],
       scale:[d.scale[0],d.scale[1],d.scale[2]],
-      contact,normal:normal?[normal[0],normal[1],normal[2]]:null,impulse:null,
+      contact,normal:n,impulse,
       source:{weaponId:facts?.weaponId??'unknown',...(kind==='burn'?{damageKind:'burn' as const}:{}),
-        hitSequence:facts?.vfxSequence??seq},
+        hitSequence:facts?.vfxSequence??++this.sceneHitSeq},
     };
-    this.destructibleEventBuf.push(ev);
+    this.destructibleEventBuf.push(frozenFractureEvent(ev));
     this.syncGates();
     return applied;
   }
@@ -1046,7 +1055,7 @@ export class RuntimeSession {
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
     for(const s of this.destructibleStates.values()){s.hp=s.desc.maxDurability;s.broken=false;}
-    this.destructibleEventBuf.length=0;this.destructibleSeq=0;
+    this.destructibleEventBuf.length=0;this.destructibleSeq=0;this.sceneHitSeq=0;
     this.navigationGates.reset();this.syncGates();
     this.navigation.reset(this.goalX,this.goalZ,this.desc.playerStart.y??0);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——

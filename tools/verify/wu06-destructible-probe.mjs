@@ -21,6 +21,11 @@ async function shot(cdp, name) {
 }
 
 async function equip(cdp, key, id) {
+  // 关掉场景选择器后焦点可能落在输入控件；键位事件必须回到页面主体。
+  await cdp.eval("(()=>{const a=document.activeElement;if(a instanceof HTMLElement)a.blur();document.body.setAttribute('tabindex','-1');document.body.focus();})()");
+  // 原生输入要求运行态：前面若因终态/测试暂停，先恢复再发键。
+  if (await cdp.eval('window.__editor.playCtl.isPaused')) await cdp.eval('window.__editor.playCtl.resume()');
+  await sleep(80);
   await cdp.send('Input.dispatchKeyEvent', {type: 'keyDown', key, code: 'Digit' + key, windowsVirtualKeyCode: 48 + Number(key)});
   await cdp.send('Input.dispatchKeyEvent', {type: 'keyUp', key, code: 'Digit' + key, windowsVirtualKeyCode: 48 + Number(key)});
   return waitFor(async () => {
@@ -52,6 +57,13 @@ async function aimAt(cdp) {
   return {x: best.x, y: best.y, d: best.d, point: best.point, canvas: true, behind: false};
 }
 
+async function waitBroken(cdp, nodeId, timeout = 9000) {
+  return waitFor(async () => {
+    const v = await cdp.eval(`(()=>{const c=window.__editor.playCtl;const s=c.session.runtime.destructibleSnapshot().find(x=>x.nodeId==='${nodeId}');return s&&s.broken?{snap:c.session.runtime.destructibleSnapshot(),batches:c.fractureBatches.length}:null;})()`);
+    return v;
+  }, {timeout, interval: 100, label: nodeId + ' broken'});
+}
+
 async function main() {
   return runGameProbe({
     name: 'wu06-destructible', outDir: OUT_DIR, port: Number(arg('port', 5100)), cdpPort: Number(arg('cdp', 9481)),
@@ -68,6 +80,13 @@ async function main() {
       details.window = bounds.bounds;
     } catch (e) { check('验证窗口固定在 DISPLAY1', false, String(e)); }
 
+    // 场景必须由原场景选择器可达（W06-01）；在进入 Play 前检查，避免对话框影响玩法帧。
+    await cdp.eval("document.querySelector('.scene-current')?.click()");
+    await sleep(200);
+    const listed = await cdp.eval("[...document.querySelectorAll('.scene-choice')].some(b=>b.textContent.includes('可破坏庭院'))");
+    await cdp.eval("document.querySelector('.scene-browser')?.close()");
+    check('WU-06 场景由原场景选择器可达', listed === true);
+
     await playPaused(cdp);
     // 真实原生输入需要运行态（暂停下 J/切枪不推进）；命中/导航取真实时钟。
     await cdp.eval("document.querySelector('#btn-pause').click()");
@@ -82,12 +101,6 @@ async function main() {
     check('正式场景装载 3 个可破坏对象（初始 intact）', initial.snapshot.length === 3 && initial.snapshot.every(s => s.hp === 40 && !s.broken), JSON.stringify(initial.snapshot));
     check('可破坏对象初始参与射线与导航阻挡', ['nd_fr_barrel','nd_w6_barrel_b','nd_w6_barrel_c'].every(n => initial.collision.solids.includes(n)), JSON.stringify(initial.collision));
     check('未配置对照与独立墙体仍在静态碰撞中', initial.collision.solids.includes('nd_w6_control') && initial.collision.solids.includes('nd_w6_wall_l'), JSON.stringify(initial.collision));
-    // 场景必须由原场景选择器可达（W06-01）
-    await cdp.eval("document.querySelector('.scene-current')?.click()");
-    await sleep(200);
-    const listed = await cdp.eval("[...document.querySelectorAll('.scene-choice')].some(b=>b.textContent.includes('可破坏庭院'))");
-    await cdp.eval("document.querySelector('.scene-browser')?.close()");
-    check('WU-06 场景由原场景选择器可达', listed === true);
 
     const npcSpawn = await waitFor(async () => {
       const n = await cdp.eval("(()=>{const r=window.__editor.playCtl.session.runtime;const n=r.view().find(v=>v.kind==='npc');return n?{x:n.x,z:n.z}:null;})()");
@@ -165,6 +178,28 @@ async function main() {
     details.reset = restored;
     check('Reset 恢复完整物体/碰撞/导航与显示状态', restored.snapshot.every(s=>s.hp===40&&!s.broken) && restored.collision.solids.includes('nd_fr_barrel') && restored.collision.dynamicObstacles.includes('nd_fr_barrel') && restored.brokenNodes.length===0, JSON.stringify(restored));
 
+    // 原生电锯（范围 direct）与狙击（贯穿）不能只靠手枪/爆炸证明。
+    check('原生数字键切到 chainsaw', !!(await equip(cdp, '5', 'chainsaw')));
+    await aimAt(cdp);
+    await cdp.send('Input.dispatchKeyEvent', {type: 'keyDown', key: 'j', code: 'KeyJ', windowsVirtualKeyCode: 74});
+    const saw = await waitBroken(cdp, 'nd_fr_barrel', 8000);
+    await cdp.send('Input.dispatchKeyEvent', {type: 'keyUp', key: 'j', code: 'KeyJ', windowsVirtualKeyCode: 74});
+    details.chainsaw = saw;
+    check('原生电锯在射程内真实击碎目标（忽略自身 collider）', !!saw, JSON.stringify(saw?.snap));
+    await cdp.eval('window.__editor.playCtl.reset()');
+    await sleep(800);
+
+    check('原生数字键切到 sniper', !!(await equip(cdp, '4', 'sniper')));
+    await aimAt(cdp);
+    await cdp.send('Input.dispatchKeyEvent', {type: 'keyDown', key: 'j', code: 'KeyJ', windowsVirtualKeyCode: 74});
+    await sleep(120);
+    await cdp.send('Input.dispatchKeyEvent', {type: 'keyUp', key: 'j', code: 'KeyJ', windowsVirtualKeyCode: 74});
+    const snipe = await waitBroken(cdp, 'nd_fr_barrel', 5000);
+    details.sniper = snipe;
+    check('原生贯穿狙击真实击碎目标', !!snipe, JSON.stringify(snipe?.snap));
+    await cdp.eval('window.__editor.playCtl.reset()');
+    await sleep(800);
+
     await cdp.eval("document.querySelector('#btn-pause').click()");
     await sleep(120);
     check('原生数字键切到 launcher', !!(await equip(cdp, '7', 'launcher')));
@@ -204,6 +239,28 @@ async function main() {
     const late = await cdp.eval("(()=>{const e=window.__editor,c=e.playCtl,r=c.session.runtime;return {snap:r.destructibleSnapshot(),batches:c.fractureBatches.length,broken:[...c.brokenNodes].length,error:c.destructibleError};})()");
     details.late = late;
     check('Reset 后旧代破坏表现不作用于新 run', late.snap.find(x=>x.nodeId==='nd_fr_barrel').hp===40 && !late.snap.find(x=>x.nodeId==='nd_fr_barrel').broken && late.batches===0 && late.broken===0, JSON.stringify(late));
+
+    // 碎片后端未就绪：先切换显示/物理镜像并给可见诊断；恢复后同一事实重试成功。
+    await cdp.eval("document.querySelector('#btn-pause').click()");
+    await sleep(120);
+    await cdp.eval('window.__editor.playCtl.reset()');
+    await sleep(400);
+    await cdp.eval("document.querySelector('#btn-pause').click()");
+    await sleep(100);
+    await cdp.eval("(()=>{const b=window.__editor.playCtl.fracture;window.__origBackend=b.backend.bind(b);b.backend=()=>null;})()");
+    await cdp.eval("window.__editor.playCtl.session.runtime.damageSceneObject('nd_w6_barrel_b',40,{weaponId:'w'},'direct')");
+    await sleep(700);
+    const notReady = await cdp.eval("(()=>{const e=window.__editor,c=e.playCtl,r=c.session.runtime;return {error:c.destructibleError,pending:c.pendingDestructibleEvents.length,broken:[...c.brokenNodes],collision:r.collisionSnapshot(),snap:r.destructibleSnapshot()};})()");
+    details.notReady = notReady;
+    check('后端未就绪仍先隐藏完整对象并移除镜像', notReady.broken.includes('nd_w6_barrel_b') && !notReady.collision.solids.includes('nd_w6_barrel_b') && notReady.pending>=1, JSON.stringify(notReady));
+    check('后端未就绪给出可见诊断', !!notReady.error && notReady.error.includes('未就绪'), JSON.stringify(notReady.error));
+    await cdp.eval("(()=>{const b=window.__editor.playCtl.fracture;b.backend=window.__origBackend;})()");
+    await sleep(1800);
+    const recoveredBackend = await cdp.eval("(()=>{const c=window.__editor.playCtl;return {error:c.destructibleError,pending:c.pendingDestructibleEvents.length,batches:c.fractureBatches.length,broken:[...c.brokenNodes]};})()");
+    details.recoveredBackend = recoveredBackend;
+    check('后端恢复后同一破坏事实重试成功', recoveredBackend.pending===0 && recoveredBackend.batches>0 && recoveredBackend.error===null && recoveredBackend.broken.includes('nd_w6_barrel_b'), JSON.stringify(recoveredBackend));
+    await cdp.eval('window.__editor.playCtl.reset()');
+    await sleep(600);
 
     // 表现失败保底：游戏事实仍成立，诊断可见，不留下不可见完整 collider。
     await cdp.eval("document.querySelector('#btn-pause').click()");
