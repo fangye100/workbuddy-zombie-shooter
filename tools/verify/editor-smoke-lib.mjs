@@ -232,15 +232,20 @@ export class Cdp {
 /**
  * 构造既有 Chrome 参数；严格TLS调用显式关闭证书忽略。
  */
+// 本机多显示器：headed 验证窗口默认固定到 Windows DISPLAY1（x=1920 起），
+// 不覆盖用户在主屏（DISPLAY5, x=0）与 DISPLAY2（x=3840）上的工作。
+export const DEFAULT_HEADED_WINDOW_POSITION='1920,80';
+
 export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',windowPosition=null,userDataDir='.workbuddy/tmp/chrome-profile',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
+  const effectivePosition=headed?(windowPosition??DEFAULT_HEADED_WINDOW_POSITION):windowPosition;
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
     `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${path.resolve(userDataDir)}`,
     `--window-size=${windowSize}`,
-    // 本机多显示器：验证窗口固定到 Windows DISPLAY1（x=1920 起），不覆盖用户其他屏。
-    ...(windowPosition ? [`--window-position=${windowPosition}`] : []),
+    // 显式传入的坐标优先，便于换屏或复跑指定位置。
+    ...(effectivePosition ? [`--window-position=${effectivePosition}`] : []),
     '--no-first-run',
     '--no-default-browser-check',
   ];

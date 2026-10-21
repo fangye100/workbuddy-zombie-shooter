@@ -76,6 +76,8 @@ async function main() {
     appUrl: APP_URL,
     grantClipboard: true,
     windowSize: arg('window-size','1600,1000'),
+    // 默认由启动库固定到 DISPLAY1（1920,80）；需要换屏时显式覆盖。
+    windowPosition: arg('window-position', null),
     ignoreCertificateErrors: false,
     setupTimeoutMs: 20000,
   }));

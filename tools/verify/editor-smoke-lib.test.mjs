@@ -10,6 +10,16 @@ test('合并后保留专属profile与严格TLS选项，headed不启用软件GPU'
   assert.ok(!flags.some(f=>/headless|swiftshader|ignore-certificate-errors/.test(f)));
 });
 
+test('headed 默认锁定 DISPLAY1 且显式坐标优先，headless 不加窗口位置',()=>{
+  const headed=editorSessionFlags({cdpPort:9343,headed:true,appUrl:'https://test/'});
+  assert.ok(headed.includes('--window-position=1920,80'));
+  const override=editorSessionFlags({cdpPort:9343,headed:true,appUrl:'https://test/',windowPosition:'3840,120'});
+  assert.ok(override.includes('--window-position=3840,120'));
+  assert.ok(!override.includes('--window-position=1920,80'));
+  const headless=editorSessionFlags({cdpPort:9343,headed:false,appUrl:'https://test/'});
+  assert.ok(!headless.some(f=>f.startsWith('--window-position=')));
+});
+
 const state=()=>({timeOrigin:2,url:'https://test/?scene=fixture',fatal:null,source:{url:'/fixture.scene.json'},pending:0,frames:60,assets:true,preview:true,width:600,height:300});
 test('就绪须经过新文档、正确场景、资产完成、服务绑定及出帧，早期hook不足以通过',async()=>{
   const ready=state(),states=[{...ready,timeOrigin:1},{...ready,source:{url:'/old.scene.json'}},{...ready,pending:2},{...ready,frames:0},{...ready,assets:false},{...ready,preview:false},ready];let calls=0;

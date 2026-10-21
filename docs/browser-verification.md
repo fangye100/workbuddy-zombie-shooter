@@ -62,6 +62,10 @@ GLB 及 sidecar、面数明显不同的 H-01 两档，仍验证切换后实际�
 
 共用启动帮助器改动后，串行运行两个 headed 套件（同一固定 profile 不可并发使用）：
 
+headed 窗口由 `tools/verify/editor-smoke-lib.mjs` 默认固定在 Windows DISPLAY1
+（`--window-position=1920,80`），不覆盖用户在主屏与其他显示器上的工作；需要换屏时
+显式传 `--window-position`。headless 不设置窗口位置。
+
 ```powershell
 node --test tools/verify/editor-smoke-lib.test.mjs
 pnpm exec vitest run apps/editor/test/dock-layout.test.ts
