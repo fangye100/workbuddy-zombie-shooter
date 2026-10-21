@@ -68,6 +68,9 @@ export class PlayFractureRenderer {
   private readonly retryAt = new Map<string, number>();
   /** 已计入上传字节的贴图内容身份（同图只算一次）。 */
   private readonly sharedTextures = new Set<string>();
+  /** 每次读取的归属 token（防止旧代完成时删掉新代同路径的 pending）。 */
+  private pendingSeq = 0;
+  private readonly pendingToken = new Map<string, number>();
   /** 已加载网格数 / 最近一次同步的实例数与三角形数（供验收观察）。 */
   readonly stats = { meshes: 0, instances: 0, triangles: 0, uploadBytes: 0, textures: 0 };
 
@@ -211,6 +214,7 @@ export class PlayFractureRenderer {
     for (const e of this.meshes.values()) e?.albedo?.close();
     this.meshes.clear();
     this.pending.clear();
+    this.pendingToken.clear();
     this.retryAt.clear();
     this.sharedTextures.clear();
     this.batches = [];
@@ -230,6 +234,7 @@ export class PlayFractureRenderer {
     for (const e of this.meshes.values()) e?.albedo?.close();
     this.meshes.clear();
     this.pending.clear();
+    this.pendingToken.clear();
     this.retryAt.clear();
     this.sharedTextures.clear();
     this.lastError = null;
@@ -243,7 +248,9 @@ export class PlayFractureRenderer {
   private loadMesh(path: string, pivot: readonly [number, number, number] | null): void {
     const pivotKey: [number, number, number] = pivot === null ? [0, 0, 0] : [pivot[0], pivot[1], pivot[2]];
     const gen = this.generation;
+    const token = ++this.pendingSeq;
     this.pending.add(path);
+    this.pendingToken.set(path, token);
     void (async (): Promise<void> => {
       let albedo: ImageBitmap | null = null;
       try {
@@ -302,7 +309,12 @@ export class PlayFractureRenderer {
         this.meshes.delete(path);
         this.retryAt.set(path, Date.now() + this.retryDelayMs);
       } finally {
-        this.pending.delete(path);
+        // 只有仍由本次读取持有该 path 的 pending 时才删除；旧代完成不能删掉
+        // 新代同路径的 pending（否则会触发第三次读取并污染统计）。
+        if (this.pendingToken.get(path) === token) {
+          this.pendingToken.delete(path);
+          this.pending.delete(path);
+        }
       }
     })();
   }

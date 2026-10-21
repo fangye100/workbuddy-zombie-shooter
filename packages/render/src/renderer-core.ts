@@ -815,6 +815,25 @@ export class RendererCore {
     const hit = this.dynamicMeshes.get(b.meshId);
     if (hit !== undefined) return hit;
     if (b.vertices.length === 0 || b.indices.length === 0) return null;
+    // 部分分配失败要原子回收：任何 createBuffer 抛错都销毁已建 buffer 并记录诊断，
+    // 不能把半成品留在 GPU 上（Stop 时也找不到它们）。
+    const created: GPUBuffer[] = [];
+    try {
+      return this.buildDynamicMesh(b, created);
+    } catch (e) {
+      for (const buf of created) buf.destroy();
+      this.dynamicError = b.meshId + '：' + (e instanceof Error ? e.message : String(e));
+      return null;
+    }
+  }
+
+  /** 动态网格的 GPU 资源是否在部分分配失败时被回收（验收观察）。 */
+  dynamicError: string | null = null;
+
+  private buildDynamicMesh(
+    b: CoreDynamicBatch,
+    created: GPUBuffer[],
+  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number } | null {
     const vbuf = this.device.createBuffer({
       label: `dyn-${b.meshId}-v`,
       size: b.vertices.byteLength,
@@ -825,7 +844,9 @@ export class RendererCore {
       size: b.indices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
+    created.push(vbuf);
     this.device.queue.writeBuffer(vbuf, 0, b.vertices);
+    created.push(ibuf);
     this.device.queue.writeBuffer(ibuf, 0, b.indices);
     const vcount = b.vertices.length / 15;
     const skinVb = this.device.createBuffer({
@@ -833,6 +854,7 @@ export class RendererCore {
       size: Math.max(24, vcount * 24),
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
+    created.push(skinVb);
     this.device.queue.writeBuffer(
       skinVb,
       0,
@@ -1388,6 +1410,8 @@ export class RendererCore {
     this.solidDynamicTexture?.destroy();
     this.solidDynamicTexture = null;
     this.solidDynamicMaterialCache = null;
+    for (const m of this.dynamicMaterials.values()) m.texture.destroy();
+    this.dynamicMaterials.clear();
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
     this.dummyPaletteBuf.destroy();

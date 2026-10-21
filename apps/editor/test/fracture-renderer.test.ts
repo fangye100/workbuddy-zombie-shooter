@@ -310,6 +310,55 @@ describe('WU-05 碎片动态批次装配', () => {
     renderer.dispose();
   }, 30000);
 
+  it('旧代读取完成不删除新代同路径的 pending（不会触发第三次读取）', async () => {
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    const releases: (() => void)[] = [];
+    let calls = 0;
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> {
+        calls++;
+        await new Promise<void>((r) => releases.push(r));
+        return glb.slice(0);
+      },
+    };
+    const renderer = new PlayFractureRenderer(io as never);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    const mkChunk = () => ({
+      chunkId: 'c1', cls: 'small' as const,
+      mesh: { path: 'shared-late.glb', guid: 'g1' },
+      position: [0, 2, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+      shape: { type: 'sphere' as const, radius: 0.25 },
+      mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0] as [number, number, number],
+      linearVelocity: [0, 0, 0] as [number, number, number],
+      angularVelocity: [0, 0, 0] as [number, number, number],
+    });
+    expect(rt.play({ event: ev, chunks: [mkChunk()], priority: 1, lifetimeSec: 10, fadeSec: 0 }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);              // 第 1 次读取（挂起）
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toBe(1);
+
+    renderer.beginGeneration();              // Reset 换绑
+    renderer.sync(rt, backend);              // 新代对同路径发起第 2 次读取
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toBe(2);
+
+    releases[0]!();                           // 旧代先完成
+    await new Promise((r) => setTimeout(r, 30));
+    // 旧代完成不得删掉新代的 pending → 不应有第 3 次读取
+    expect(calls).toBe(2);
+
+    releases[1]!();                           // 新代完成
+    await new Promise((r) => setTimeout(r, 30));
+    renderer.sync(rt, backend);
+    expect(renderer.stats.meshes).toBe(1);
+    expect(renderer.dynamicBatches.length).toBeGreaterThan(0);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
   it('同几何不同实例合并进一个批次（不按实例数放大 draw）', async () => {
     const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
     const io = makeIO({ 'shared.glb': glb });

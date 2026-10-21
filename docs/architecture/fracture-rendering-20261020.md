@@ -41,8 +41,8 @@
 - Play 期新增的 GPU 资源（动态实例 buffer、姿态快照 buffer、刚体基向量 buffer、
   网格/皮肤 buffer、贴图、共享白色材质纹理）全部由 renderer-core 持有；
   releaseDynamicResources() 与 destroy() 两条路径都会 destroy 实例/姿态/刚体
-  buffer 与白色纹理，并 clearDynamicMeshes() 释放网格/贴图。Editor 既有的共享
-  资产不受影响。
+  buffer、白色纹理与按 textureKey 共享的贴图（dynamicMaterials 逐项 destroy 后清空），
+  clearDynamicMeshes() 负责网格/皮肤顶点索引 buffer。Editor 既有的共享资产不受影响。
 - 账目顺序：dynamic-instances 先登记、fracture-renderer 后登记，Stop 时按登记
   顺序释放——先销毁 GPU 资源，再 dispose 渲染装配（关闭 ImageBitmap、清 CPU 缓存、
   递增代次）。
@@ -104,8 +104,10 @@
 
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
   Preview owner（WU-08）不在本单元。
-- 逐实例淡出：运行时 chunk.fade(0..1) 写入刚体基向量 m0.w，shader 以它作为 alpha，
-  动态管线开启 alpha 混合（alpha=1 的旧角色输出与不透明一致）。
+- 逐实例淡出：运行时 chunk.fade(0..1) 写入刚体基向量 m0.w，主表面与 inverted-hull
+  描边都使用该 alpha，动态管线开启 alpha 混合（alpha=1 的旧角色输出与不透明一致）。
+- 部分分配失败：动态网格的 vbuf/ibuf/skinVb 任一创建失败会销毁已建 buffer、记录
+  core.dynamicError 并跳过该批，不留半成品 GPU 资源。
 - 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次（探针记录 charBatches=2、本帧未上传
   调色板），因此「原角色 palette/transition/hit/burn」的 headed 对照仍待含蒙皮
   NPC 的场景验证；shader 的 bit0 分支未被刚体模式改动，pose-palette /

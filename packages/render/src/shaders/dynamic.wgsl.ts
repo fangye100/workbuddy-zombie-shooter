@@ -316,7 +316,8 @@ fn fs_main(in : VSOut) -> FragOut {
 fn fs_outline(in : VSOut) -> FragOut {
   var out : FragOut;
   let ink = srgbToLinear(toon.inkColor.rgb);
-  out.hdr = vec4f(applyFog(ink, in.worldPos), 1.0);
+  // 描边也要随实例淡出，否则末段只剩一圈黑边
+  out.hdr = vec4f(applyFog(ink, in.worldPos), in.alpha);
   // aux.a = 描边 mask：后处理据此跳过 grading / 半调 / 暗角，与静态场景一致
   out.aux = vec4f(0.0, 0.0, 0.0, 1.0);
   return out;
