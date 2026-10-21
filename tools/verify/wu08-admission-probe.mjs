@@ -16,7 +16,7 @@ const profileText=JSON.stringify(profile),profileMeta=JSON.parse(fs.readFileSync
 const hash=x=>createHash('sha256').update(x).digest('hex');profileMeta.sourceHash='sha256:'+hash(profileText);
 const originals=[P,P+'.meta.json','aether.project.json','assets/scenes/sandbox/fracture-wu06.scene.json',profile.source.model.path,profile.source.model.path+'.meta.json',...profile.chunks.flatMap(c=>[c.mesh.path,c.mesh.path+'.meta.json'])];
 const fileHashes=Object.fromEntries(originals.map(p=>[p,hash(fs.readFileSync(p))]));
-const sourcePaths=['packages/runtime/src/fracture-activation.ts','packages/runtime/src/doc-diff.ts','apps/editor/src/services/fracture-panel.ts','apps/editor/src/services/fracture-preview.ts','apps/editor/src/services/fracture-author-draft.ts','tools/verify/wu08-admission-probe.mjs','tools/verify/game-probe-lib.mjs','tools/verify/editor-smoke-lib.mjs'];
+const sourcePaths=['packages/runtime/src/fracture-activation.ts','packages/runtime/src/doc-diff.ts','apps/editor/src/services/author-resource-document.ts','apps/editor/src/services/fracture-panel.ts','apps/editor/src/services/fracture-preview.ts','apps/editor/src/services/fracture-author-draft.ts','tools/verify/wu08-admission-probe.mjs','tools/verify/game-probe-lib.mjs','tools/verify/editor-smoke-lib.mjs'];
 const sourceHashes=Object.fromEntries(sourcePaths.map(p=>[p,hash(fs.readFileSync(p))]));
 const {results,check,summary}=createRecorder(),state=cdp=>cdp.eval('window.__editor.fractureAuthor.snapshot()');
 async function settle(cdp){await cdp.eval('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');}
@@ -27,7 +27,9 @@ async function enter(cdp,label,value){const e=`document.querySelector('#fracture
  await cdp.eval(`(${e}).scrollIntoView({block:'center'})`);await settle(cdp);await clickFocusedElement(cdp,e);
  for(const type of ['keyDown','keyUp'])await cdp.send('Input.dispatchKeyEvent',{type,key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
  await cdp.send('Input.insertText',{text:String(value)});for(const type of ['keyDown','keyUp'])await cdp.send('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9});}
-async function applied(cdp){if(!await waitFor(async()=>{const s=await state(cdp);return !s.applyingNode&&!s.locked;},{timeout:20000}))throw Error('场景Apply没有完成');}
+async function applied(cdp){if(!await waitFor(async()=>{const s=await state(cdp);return !s.applyingNode&&!s.applyingAsset&&!s.locked;},{timeout:20000}))throw Error('Apply没有完成');}
+async function holdAssetMeta(cdp,target){await cdp.eval(`(()=>{const original=window.fetch;let release;const gate=new Promise(r=>release=r),r=window.__assetAdmissionGate={used:false,finished:false,release,restore:()=>window.fetch=original};window.fetch=async(...args)=>{const response=await original(...args),input=args[0],u=new URL(typeof input==='string'?input:input.url,location.href);if(!r.used&&u.pathname==='/__fs/file'&&u.searchParams.get('path')===${JSON.stringify(target+'.meta.json')}){r.used=true;const ok=await gate;r.finished=true;if(!ok)throw new Error('late asset admission failure');}return response;};return true;})()`);}
+async function assetEntered(cdp){if(!await waitFor(()=>cdp.eval('window.__assetAdmissionGate.used'),{timeout:10000}))throw Error('资产Apply未进入真实引用IO');}
 process.exitCode=await runGameProbe({name:'wu08-admission',outDir,port:Number(arg('port',5100)),cdpPort:Number(arg('cdp',9498)),chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),headed:true,windowPosition:'1920,80',windowSize:'1600,1000',scene:'assets/scenes/sandbox/fracture-wu06.scene.json',results,check,summary},async({cdp,details})=>{
  details.gitHead=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();details.sourceHashes=sourceHashes;details.formalFileHashes=fileHashes;
  details.variant={note:'仅当前tab的profile响应改为合法独立convex引用；虚拟IO提供正式chunk原字节，所有原文件不写入。',path:proxyPath,guid:proxyGuid,byteHash:hash(bytes),profileTextHash:hash(profileText)};
@@ -54,15 +56,21 @@ process.exitCode=await runGameProbe({name:'wu08-admission',outDir,port:Number(ar
   const refs={source:profile.source.model.path,chunk:profile.chunks[0].mesh.path,convex:proxyPath};
   for(const [kind,target]of Object.entries(refs))for(const mode of ['guid','kind','quarantined','future','meta-missing','binary-missing','binary-invalid']){
    const label=kind+'/'+mode,before=await cdp.eval('JSON.stringify(window.__editor.renderer.getDocument())');
+   const assetBefore=await state(cdp),assetBeforeJson=JSON.stringify(assetBefore.asset),ttl=assetBefore.asset.playback.lifetimeSec===9?'10':'9';await enter(cdp,'碎裂寿命 s',ttl);
    const value=String(Number(await cdp.eval(`document.querySelector('#fracture-panel [aria-label="初始耐久"]').value`))+1);
    await enter(cdp,'初始耐久',value);await cdp.eval(`Object.assign(window.__wu08Admission,{target:${JSON.stringify(target)},mode:${JSON.stringify(mode)},hits:0})`);await click(cdp,'应用碎裂配置');await applied(cdp);
    const after=await cdp.eval('JSON.stringify(window.__editor.renderer.getDocument())'),apply=await cdp.eval(`({hits:window.__wu08Admission.hits,status:document.querySelector('#fracture-panel [role=status]').textContent,pending:document.querySelector('#fracture-panel [aria-label="初始耐久"]').value,ttl:document.querySelector('#fracture-panel [aria-label="碎裂寿命 s"]').value})`);
    const record={kind,mode,target,beforeHash:hash(before),afterHash:hash(after),apply};details.cases.push(record);
-   check(label+'：坏引用Apply拒绝，原Document与新草稿保留',before===after&&apply.hits>0&&apply.pending===value&&apply.ttl==='9'&&apply.status.includes(target),JSON.stringify(record));
+   check(label+'：坏引用Apply拒绝，原Document与新草稿保留',before===after&&apply.hits>0&&apply.pending===value&&apply.ttl===ttl&&apply.status.includes(target),JSON.stringify(record));
+   await cdp.eval('window.__wu08Admission.hits=0');await click(cdp,'应用碎裂资产参数');await applied(cdp);
+   const assetAfter=await state(cdp);record.assetApply={beforeHash:hash(assetBeforeJson),afterHash:hash(JSON.stringify(assetAfter.asset)),beforeUndo:assetBefore.assetUndoDepth,afterUndo:assetAfter.assetUndoDepth,hits:await cdp.eval('window.__wu08Admission.hits'),diagnostic:assetAfter.diagnostic};
+   check(label+'：资产Apply同样拒绝，原资产与历史/草稿保留',record.assetApply.beforeHash===record.assetApply.afterHash&&record.assetApply.beforeUndo===record.assetApply.afterUndo&&record.assetApply.hits>0&&assetAfter.diagnostic.includes(target)&&await cdp.eval(`document.querySelector('#fracture-panel [aria-label="碎裂寿命 s"]').value`)===ttl,JSON.stringify(record.assetApply));
    await cdp.eval('window.__wu08Admission.hits=0');await click(cdp,'开始/重播碎裂预览');if(!await waitFor(async()=>!!(await state(cdp)).preview.diagnostic,{timeout:15000}))throw Error(label+' Preview没有诊断');
    record.preview=await cdp.eval(`(()=>{const e=window.__editor,s=e.fractureAuthor.snapshot();return {hits:window.__wu08Admission.hits,ready:s.preview.ready,diagnostic:s.preview.diagnostic,backend:e.fractureAuthor.resources()?.backend()?.ledger??null,meshes:[...e.renderer.core.dynamicMeshes.keys()].filter(x=>x.startsWith(s.preview.owner+':')).length};})()`);
    check(label+'：同一当前引用在World/GPU前拒绝',record.preview.hits>0&&!record.preview.ready&&record.preview.backend===null&&record.preview.meshes===0&&record.preview.diagnostic.includes(target),JSON.stringify(record.preview));
-   await cdp.eval("window.__wu08Admission.mode='ok'");await click(cdp,'应用碎裂配置');await applied(cdp);
+   await cdp.eval("window.__wu08Admission.mode='ok'");await click(cdp,'应用碎裂资产参数');await applied(cdp);const recoveredAsset=await state(cdp);
+   record.assetRecovery={ttl:recoveredAsset.asset.playback.lifetimeSec,undo:recoveredAsset.assetUndoDepth};check(label+'：恢复后原资产草稿Apply为一笔历史',recoveredAsset.asset.playback.lifetimeSec===Number(ttl)&&recoveredAsset.assetUndoDepth===assetBefore.assetUndoDepth+1,JSON.stringify(record.assetRecovery));
+   await click(cdp,'应用碎裂配置');await applied(cdp);
    record.recoveredDurability=await cdp.eval(`window.__editor.renderer.getDocument().nodes.find(n=>n.id==='nd_fr_barrel').components.find(c=>c.kind==='Destructible').maxDurability`);
    check(label+'：恢复后原场景草稿Apply成功',record.recoveredDurability===Number(value));
    await click(cdp,'开始/重播碎裂预览');if(!await waitFor(async()=>(await state(cdp)).preview.ready,{timeout:20000}))throw Error(label+' 恢复没有就绪');await click(cdp,'触发碎裂预览');
@@ -70,6 +78,21 @@ process.exitCode=await runGameProbe({name:'wu08-admission',outDir,port:Number(ar
    record.recovery=await cdp.eval(`(()=>{const e=window.__editor,s=e.fractureAuthor.snapshot().preview;return {active:s.active,bodies:e.fractureAuthor.resources().backend().ledger.dynamicBodies,sourceVisible:s.sourceVisible,pool:s.stats.poolActive,owner:s.owner,meshes:[...e.renderer.core.dynamicMeshes.keys()].filter(x=>x.startsWith(s.owner+':')).length};})()`);
    check(label+'：恢复后真实物理/GPU接管',record.recovery.active===profile.chunks.length&&record.recovery.bodies===profile.chunks.length&&!record.recovery.sourceVisible&&record.recovery.meshes>0,JSON.stringify(record.recovery));await click(cdp,'停止碎裂预览');
   }
+  // 保留真实引用fetch，仅延后其响应；新输入和关闭/新Apply分别隔离旧异步结果。
+  const stable=await state(cdp),stableJson=JSON.stringify(stable.asset);await enter(cdp,'碎裂寿命 s','7');await holdAssetMeta(cdp,profile.source.model.path);
+  try{
+   await click(cdp,'应用碎裂资产参数');await assetEntered(cdp);await enter(cdp,'碎裂寿命 s','8');await cdp.eval('window.__assetAdmissionGate.release(true)');await applied(cdp);
+   const changed=await state(cdp);details.changedDuringAdmission={before:hash(stableJson),after:hash(JSON.stringify(changed.asset)),undoBefore:stable.assetUndoDepth,undoAfter:changed.assetUndoDepth,diagnostic:changed.diagnostic};
+   check('资产Apply校验期间的新输入保留，旧候选不改资产/历史',JSON.stringify(changed.asset)===stableJson&&changed.assetUndoDepth===stable.assetUndoDepth&&await cdp.eval(`document.querySelector('#fracture-panel [aria-label="碎裂寿命 s"]').value`)==='8'&&changed.diagnostic.includes('新的资产输入'),JSON.stringify(details.changedDuringAdmission));
+  }finally{await cdp.eval('window.__assetAdmissionGate.restore()');}
+  await holdAssetMeta(cdp,profile.source.model.path);
+  try{
+   await click(cdp,'应用碎裂资产参数');await assetEntered(cdp);await clickFocusedElement(cdp,`document.querySelector('#fracture-panel > summary')`);await waitFor(async()=>!(await state(cdp)).applyingAsset,{timeout:5000});
+   await clickFocusedElement(cdp,`document.querySelector('#fracture-panel > summary')`);await enter(cdp,'碎裂寿命 s','12');await click(cdp,'应用碎裂资产参数');await applied(cdp);
+   const latest=await state(cdp),latestJson=JSON.stringify(latest.asset),diagnostic=latest.diagnostic;await cdp.eval('window.__assetAdmissionGate.release(false)');await waitFor(()=>cdp.eval('window.__assetAdmissionGate.finished'),{timeout:5000});await settle(cdp);
+   const final=await state(cdp);details.closedDuringAdmission={ttl:final.asset.playback.lifetimeSec,undo:final.assetUndoDepth,diagnostic:final.diagnostic};
+   check('关闭面板后的迟到资产准入失败不覆盖新Apply/历史/诊断',latest.asset.playback.lifetimeSec===12&&JSON.stringify(final.asset)===latestJson&&final.assetUndoDepth===latest.assetUndoDepth&&final.diagnostic===diagnostic&&!final.applyingAsset,JSON.stringify(details.closedDuringAdmission));
+  }finally{await cdp.eval('window.__assetAdmissionGate.restore()');}
  }finally{await cdp.eval('window.__wu08Admission?.restore()');}
  details.sourceChanges=sourcePaths.filter(p=>hash(fs.readFileSync(p))!==sourceHashes[p]);details.fileChanges=originals.filter(p=>hash(fs.readFileSync(p))!==fileHashes[p]);
  if(details.sourceChanges.length||details.fileChanges.length)throw Error('验收期间源或正式文件字节变化：'+JSON.stringify({source:details.sourceChanges,files:details.fileChanges}));

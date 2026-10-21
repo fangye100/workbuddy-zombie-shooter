@@ -24,7 +24,7 @@ export class FracturePanel {
   private readonly json=document.createElement('textarea');
   private readonly status=document.createElement('p');private readonly stats=document.createElement('pre');
   private readonly drafts=new Map<string,NodeDraft>();private readonly assets=new Map<string,AssetDraft>();
-  private selected='';private lastExternal:string|null=null;private sceneKey='';private nodesKey='';private asset:AssetDraft|null=null;private openId=0;private resourceLoading=false;private applyingNode=0;private applySequence=0;private actionSequence=0;private contextRevision=0;private lastLocked=false;
+  private selected='';private lastExternal:string|null=null;private sceneKey='';private nodesKey='';private asset:AssetDraft|null=null;private openId=0;private resourceLoading=false;private applyingNode=0;private applyingAsset=0;private applySequence=0;private actionSequence=0;private contextRevision=0;private lastLocked=false;
   private readonly chunk=document.createElement('select');private readonly chunkClass=document.createElement('select');
   private readonly numeric=new Map<string,HTMLInputElement>();
   constructor(host:HTMLElement,readonly preview:FracturePreview,private readonly port:{
@@ -66,7 +66,7 @@ export class FracturePanel {
     }
     const recipeHint=document.createElement('p');recipeHint.textContent='可编辑名称、优先级、寿命/淡出、碎块分类和质量/摩擦/恢复/速度限制；离线来源、坐标、形状及资产身份只读。';this.form.append(recipeHint);
     this.json.rows=12;field('碎裂资产参数 JSON',this.json);this.json.oninput=()=>{if(this.asset)this.asset.text=this.json.value;};
-    this.button('应用碎裂资产参数',()=>{const a=this.requireAsset();a.document.apply(this.readDraft());this.stop();a.text=JSON.stringify(a.document.value,null,2);this.assetFields();this.status.textContent='配方已应用，可撤销；磁盘尚未保存';});
+    this.button('应用碎裂资产参数',()=>this.applyAsset());
     this.button('撤销碎裂资产参数',()=>{const a=this.requireAsset();a.document.undo();this.stop();a.text=JSON.stringify(a.document.value,null,2);this.assetFields();});
     this.button('重做碎裂资产参数',()=>{const a=this.requireAsset();a.document.redo();this.stop();a.text=JSON.stringify(a.document.value,null,2);this.assetFields();});
     this.button('保存碎裂资产',async()=>{const a=this.requireAsset();if(a.text!==JSON.stringify(a.document.value,null,2))throw new Error('请先应用资产草稿，保存不会丢弃输入');const revision=this.contextRevision,request=this.actionSequence,message=await a.document.save();if(revision===this.contextRevision&&request===this.actionSequence&&this.asset===a)this.status.textContent=message;});
@@ -97,7 +97,7 @@ export class FracturePanel {
     const spawn=this.port.document()?.nodes.find(n=>n.id===this.selected)?.components.some(c=>c.kind==='SpawnPoint');for(const input of [this.durability,this.direct,this.explosion,this.burn,this.collider,this.navigation])input.disabled=!!spawn;
   }
   private async open(path:string,refreshClean=false):Promise<boolean>{
-    const id=++this.openId;this.preview.stop();this.resourceLoading=true;this.status.textContent='正在读取碎裂配方，已有草稿保留';try{
+    const id=++this.openId;this.applyingNode=0;this.applyingAsset=0;this.preview.stop();this.resourceLoading=true;this.status.textContent='正在读取碎裂配方，已有草稿保留';try{
     const r=await readProjectFile(path);if(id!==this.openId)return false;if(!r.ok)throw new Error(r.error??'资源读取失败');
     const value=migrateFractureAsset(r.json),meta=await readProjectFile(path+'.meta.json');if(id!==this.openId)return false;
     if(!meta.ok || (meta.json as {guid:string;kind:string}).guid!==value.id || (meta.json as {kind:string}).kind!=='fracture')throw new Error('碎裂 sidecar GUID/kind不匹配');
@@ -113,6 +113,7 @@ export class FracturePanel {
   private assetFields(){if(!this.asset)return;this.json.value=this.asset.text;const value=JSON.parse(this.asset.text) as FractureAsset;const keep=this.chunk.value;this.chunk.replaceChildren(...value.chunks.map(c=>new Option(c.chunkId,c.chunkId)));if(value.chunks.some(c=>c.chunkId===keep))this.chunk.value=keep;
     const chunk=value.chunks.find(c=>c.chunkId===this.chunk.value);this.chunkClass.value=chunk?.class??'small';for(const [key,input]of this.numeric){const v=(['priority','lifetimeSec','fadeSec'].includes(key)?value.playback:chunk?.proxy) as unknown as Record<string,unknown>|undefined;input.value=v?.[key]===undefined?'':String(v[key]);}}
   private async applyNode(){
+    if(this.resourceLoading)throw new Error('请等待当前资源打开完成；草稿已保留');
     if(this.applyingNode)throw new Error('配置校验进行中');
     this.capture();const d=this.getDraft();if(!d)return;
     const asset=this.readDraft(),doc=this.port.document()!,node=doc.nodes.find(n=>n.id===this.selected)!;
@@ -136,8 +137,21 @@ export class FracturePanel {
       this.preview.stop();this.drafts.delete(key);this.fields();this.status.textContent='碎裂配置已应用到场景，可Undo/Redo，请保存';
     }finally{if(this.applyingNode===request)this.applyingNode=0;}
   }
+  private async applyAsset(){
+    if(this.resourceLoading)throw new Error('请等待当前资源打开完成；草稿已保留');
+    if(this.applyingAsset)throw new Error('资产参数校验进行中');
+    const a=this.requireAsset(),draft=this.readDraft(),raw=a.text,version=a.document.revision,revision=this.contextRevision,openId=this.openId;
+    const request=++this.applySequence;this.applyingAsset=request;this.status.textContent='正在核验当前资源；未应用草稿保留';
+    try{
+      const admission=await admitFractureProfile({path:a.document.path,guid:draft.id},createEditorFractureIO(),draft);
+      if(revision!==this.contextRevision||openId!==this.openId||this.asset!==a)return;
+      if(a.text!==raw||a.document.revision!==version)throw new Error('校验期间出现新的资产输入或历史修改；当前草稿已保留，请重新Apply');
+      if(!admission.ok)throw new Error(admission.failure.stage+'：'+admission.failure.detail);
+      a.document.apply(admission.profile);this.stop();a.text=JSON.stringify(a.document.value,null,2);this.assetFields();this.status.textContent='配方已应用，可撤销；磁盘尚未保存';
+    }finally{if(this.applyingAsset===request)this.applyingAsset=0;}
+  }
   private removeNode(){const id=this.selected;const r=this.port.edit('移除碎裂配置',nodes=>{const n=nodes.find(n=>n.id===id)!;n.components=n.components.filter(c=>c.kind!=='Destructible');for(const c of n.components)if(c.kind==='SpawnPoint')c.deathFracture=null;},false);if(!r.ok)throw new Error(r.error??'移除被拒绝');this.drafts.delete(this.key());this.preview.stop();this.fields();}
-  private async startPreview(){if(this.port.locked())throw new Error('请先停止Play');const doc=this.port.document();if(!doc)throw new Error('没有作者场景');const nodeDraft=this.getDraft();if(nodeDraft?.dirty&&!validDestructible(nodeDraft.value))throw new Error('选中节点的碎裂草稿非法，请检查引用与初始耐久；输入已保留');const draft=this.readDraft(),ref={path:this.requireAsset().document.path,guid:draft.id};if(this.path.value!==ref.path||this.guid.value!==ref.guid)throw new Error('请先打开当前选择的资源，再预览');this.openId++;this.resourceLoading=false;this.applyingNode=0;await this.preview.start(structuredClone(doc),this.selected,ref,draft,7);const bounds=this.preview.bounds();if(bounds)this.port.focus(bounds);}
+  private async startPreview(){if(this.port.locked())throw new Error('请先停止Play');const doc=this.port.document();if(!doc)throw new Error('没有作者场景');const nodeDraft=this.getDraft();if(nodeDraft?.dirty&&!validDestructible(nodeDraft.value))throw new Error('选中节点的碎裂草稿非法，请检查引用与初始耐久；输入已保留');const draft=this.readDraft(),ref={path:this.requireAsset().document.path,guid:draft.id};if(this.path.value!==ref.path||this.guid.value!==ref.guid)throw new Error('请先打开当前选择的资源，再预览');this.openId++;this.resourceLoading=false;this.applyingNode=0;this.applyingAsset=0;await this.preview.start(structuredClone(doc),this.selected,ref,draft,7);const bounds=this.preview.bounds();if(bounds)this.port.focus(bounds);}
   get hasDraft(){return [...this.drafts.values()].some(d=>d.dirty)||[...this.assets.values()].some(a=>a.document.dirty||a.text!==JSON.stringify(a.document.value,null,2));}
   get hasSceneDraft(){return [...this.drafts.values()].some(d=>d.dirty);}
   frame(dt:number){const doc=this.port.document(),key=this.port.scenePath();if(key!==this.sceneKey){this.stop();this.sceneKey=key;this.selected='';this.nodesKey='';}
@@ -146,7 +160,7 @@ export class FracturePanel {
     const locked=this.port.locked();if(locked&&!this.lastLocked)this.stop();this.lastLocked=locked;this.form.disabled=locked;this.preview.update(dt);
     const p=this.preview.snapshot();this.stats.textContent=`${p.ready?'预览已就绪':'预览已停止'} · ${p.paused?'暂停':'播放'} · tick ${p.tick}\n活动碎块 ${p.active}${p.diagnostic?'\n'+p.diagnostic:''}`;
   }
-  stop(){this.openId++;this.resourceLoading=false;this.applyingNode=0;this.contextRevision++;this.preview.stop();}
+  stop(){this.openId++;this.resourceLoading=false;this.applyingNode=0;this.applyingAsset=0;this.contextRevision++;this.preview.stop();}
   openAsset(path:string){this.root.open=true;void this.run(()=>this.open(path));this.root.scrollIntoView({block:'nearest'});}
   async renamed(rename:import('../asset-util').RenameProjectResult){
     this.stop();if(this.hasDraft){this.status.textContent='改名期间产生了本地修改，草稿已保留；请处理冲突后明确重载';return;}
@@ -154,5 +168,5 @@ export class FracturePanel {
     if(active&&!await this.open(renamedResourcePath(active,rename),true))return;
     this.drafts.clear();this.fields();
   }
-  snapshot(){return {locked:this.port.locked(),resourceLoading:this.resourceLoading,applyingNode:this.applyingNode!==0,openId:this.openId,nodeId:this.selected,path:this.asset?.document.path??null,hasDraft:this.hasDraft,sceneDirty:this.hasSceneDraft,assetDirty:this.asset?.document.dirty??false,preview:this.preview.snapshot(),diagnostic:this.status.textContent};}
+  snapshot(){return {locked:this.port.locked(),resourceLoading:this.resourceLoading,applyingNode:this.applyingNode!==0,applyingAsset:this.applyingAsset!==0,openId:this.openId,nodeId:this.selected,path:this.asset?.document.path??null,hasDraft:this.hasDraft,sceneDirty:this.hasSceneDraft,assetDirty:this.asset?.document.dirty??false,asset:this.asset?structuredClone(this.asset.document.value):null,assetUndoDepth:this.asset?.document.undoDepth??0,assetRevision:this.asset?.document.revision??0,preview:this.preview.snapshot(),diagnostic:this.status.textContent};}
 }

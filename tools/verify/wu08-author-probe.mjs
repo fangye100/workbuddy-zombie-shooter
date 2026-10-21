@@ -32,7 +32,7 @@ async function click(cdp,selector,button='left'){
 
 async function textClick(cdp,text,scope='#fracture-panel'){
  const id='wu08-'+randomUUID();const selector=await cdp.eval(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(scope+' button, '+scope+' summary')})].find(e=>e.textContent.trim()===${JSON.stringify(text)});if(!e)throw new Error('找不到控件 '+${JSON.stringify(text)});e.dataset.wu08=${JSON.stringify(id)};return '[data-wu08="'+e.dataset.wu08+'"]';})()`);
- try{await click(cdp,selector);if(text==='应用碎裂配置')await waitFor(async()=>!(await state(cdp)).applyingNode,{timeout:10000,label:'当前引用准入完成'});}finally{await cdp.eval(`document.querySelector(${JSON.stringify(selector)})?.removeAttribute('data-wu08')`);}
+ try{await click(cdp,selector);if(text==='应用碎裂配置'||text==='应用碎裂资产参数')await waitFor(async()=>{const s=await state(cdp);return !s.applyingNode&&!s.applyingAsset;},{timeout:15000,label:'当前引用准入完成'});}finally{await cdp.eval(`document.querySelector(${JSON.stringify(selector)})?.removeAttribute('data-wu08')`);}
 }
 async function fill(cdp,label,value,scope='#fracture-panel'){
  await input(cdp,`${scope} [aria-label=${JSON.stringify(label)}]`,value);

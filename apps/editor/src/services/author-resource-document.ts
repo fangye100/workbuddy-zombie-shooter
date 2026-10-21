@@ -21,6 +21,7 @@ export class AuthorResourceDocument<T extends { id: string; version: number }> {
   get sourceVersion(): number { return this.baseline.version; }
   get undoDepth(): number { return this.undoStack.length; }
   get redoDepth(): number { return this.redoStack.length; }
+  get revision(): number { return this.editRevision; }
   apply(next: T): void {
     const errors = this.contract.validate(next);
     if (errors.length) throw new Error(errors.join('；'));
