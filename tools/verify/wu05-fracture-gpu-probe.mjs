@@ -152,6 +152,23 @@ const shot = await send('Page.captureScreenshot', { format: 'png' });
 fs.writeFileSync(path.join(OUT, 'fracture-play.png'), Buffer.from(shot.data, 'base64'));
 console.log('SHOT', path.join(OUT, 'fracture-play.png'));
 
+// 终态：玩家死亡后碎片必须跟随世界冻结（tick 与实例位置都不再变化）
+const terminal = await evalJs("(()=>{const c=window.__editor.playCtl,s=c.session.runtime;" +
+  "const before={tick:c.fracture.runtime.stats.ticks,batches:c.fractureBatches.length," +
+  "pos:c.fractureBatches[0]?.instances.slice(0,3)??null};" +
+  "s.applyDamage(s.playerEntityId,99999);" +
+  "for(let i=0;i<10;i++)c.update(1/60);" +
+  "const after={tick:c.fracture.runtime.stats.ticks,batches:c.fractureBatches.length," +
+  "pos:c.fractureBatches[0]?.instances.slice(0,3)??null,outcome:s.outcome};" +
+  "return {before,after};})()");
+console.log('TERMINAL', JSON.stringify(terminal));
+
+// Reset：换绑后旧批次不残留；新代重新激活可再次出批次
+const resetInfo = await evalJs("(()=>{const c=window.__editor.playCtl;" +
+  "const oldBatches=c.fractureBatches.length;c.reset();" +
+  "return {oldBatches,afterReset:c.fractureBatches.length,rendererStats:c.fractureRenderStats};})()");
+console.log('RESET', JSON.stringify(resetInfo));
+
 // Stop：核 GPU 动态资源释放
 const stopped = await evalJs(`(()=>{
   const c=window.__editor.playCtl,r=window.__editor.renderer;

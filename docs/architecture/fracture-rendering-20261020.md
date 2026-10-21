@@ -83,6 +83,23 @@
 - Stop：batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0，
   实例/姿态/刚体 buffer 与白色材质纹理都在销毁列表里，无实例残影。
 
+
+## 真实角色回归（headed，2026-10-21）
+
+\`node tools/verify/wu05-hit-burn-probe.mjs --headed --scene assets/scenes/act1/floor-1.scene.json\`
+用原生鼠标瞄准 + \`J\` 开火、数字键 \`6\` 切火焰，在正式 Act1 场景验证碎片模式没有污染
+角色实例行：
+
+- 目标角色行 \`flags\` = 1（bit0 蒙皮、bit1 刚体均符合预期）；
+- 手枪真实命中：\`impactPulse(blend.z)\` 0.63 → 0，\`hitFlash\` 非零；
+- 数字键切到 \`flame\` 后持续开火：\`burning=true\`、\`burnClock(blend.w)\` = 3.17；
+- 全程无 console error；本场景 \`fractureBatches=0\`，24 个角色行不受碎片影响。
+
+终态/Reset（同一 GPU 探针）：
+
+- 玩家死亡后 \`outcome=game-over\`，碎片 tick 与实例位置在后续 10 帧保持不变；
+- \`reset()\` 后旧 24 个批次清零、渲染统计归零，新代重新激活可再出批次。
+
 ## 边界与遗留
 
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
