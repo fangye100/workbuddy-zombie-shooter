@@ -8,6 +8,16 @@ export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance
 export type WeaponSceneDamageKind='direct'|'projectile'|'explosion'|'burn';
 export interface WeaponSceneTarget { readonly nodeId:string; readonly position:WeaponPoint; readonly radius:number;
   readonly minX?:number;readonly maxX?:number;readonly minY?:number;readonly maxY?:number;readonly minZ?:number;readonly maxZ?:number }
+/** 目标 AABB 上朝向攻击者的最近点；没有 bounds 时用中心向攻击者偏移半径。 */
+function sceneContactPoint(s:WeaponSceneTarget,from:WeaponPoint):WeaponPoint {
+  const clamp=(v:number,min:number|undefined,max:number|undefined)=>Math.max(min??v,Math.min(max??v,v));
+  if(s.minX!==undefined||s.maxX!==undefined||s.minY!==undefined||s.maxY!==undefined||s.minZ!==undefined||s.maxZ!==undefined){
+    return [clamp(from[0],s.minX,s.maxX),clamp(from[1],s.minY,s.maxY),clamp(from[2],s.minZ,s.maxZ)];
+  }
+  const dx=from[0]-s.position[0],dy=from[1]-s.position[1],dz=from[2]-s.position[2],l=Math.hypot(dx,dy,dz);
+  if(l<1e-6)return [...s.position] as WeaponPoint;
+  return [s.position[0]+dx/l*s.radius,s.position[1]+dy/l*s.radius,s.position[2]+dz/l*s.radius];
+}
 export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'|'impact'|'projectile'|'projectile-end'; readonly effectId?:number; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
 export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number;readonly damageKind?:'burn'}
 export interface WeaponWorld {
@@ -68,10 +78,11 @@ class AreaWeapon implements WeaponImplementation {
       const dx=s.position[0]-c.from[0],dz=s.position[2]-c.from[2],distance=Math.hypot(dx,dz);
       if(distance>w.rangeM+s.radius || distance>0 && (dx*c.direction[0]+dz*c.direction[2])/distance<Math.cos(half))continue;
       // 范围目标必须忽略自身 collider，否则目标自己就是“墙”，电锯/火焰永远打不中。
-      const blocked=c.world.blockedExcept?.(c.from,s.position,s.nodeId) ?? c.world.blocked(c.from,s.position);
+      const contact=sceneContactPoint(s,c.from);
+      const blocked=c.world.blockedExcept?.(c.from,contact,s.nodeId) ?? c.world.blocked(c.from,contact);
       if(blocked)continue;
-      const seq=c.combat.sceneImpact(w,c.from,s,c.tick);
-      const applied=c.world.damageScene?.(s.nodeId,c.damage,{weaponId:w.id,vfxSequence:seq},this.flame?'burn':'direct',s.position,undefined)??0;
+      const seq=c.combat.sceneImpact(w,c.from,s,c.tick,contact);
+      const applied=c.world.damageScene?.(s.nodeId,c.damage,{weaponId:w.id,vfxSequence:seq},this.flame?'burn':'direct',contact,undefined)??0;
       if(this.flame&&applied>0)c.combat.applySceneBurn(s.nodeId,w);
       if(applied>0)hit=true;
     }

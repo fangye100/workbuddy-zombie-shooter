@@ -92,6 +92,8 @@ export class PlayController {
   private fractureRenderer: PlayFractureRenderer | null = null;
   /** 本 Play 内已破坏的稳定 NodeId（Reset/Stop 恢复完整显示）。 */
   private readonly brokenNodes = new Set<string>();
+  private brokenMirrorsDirty = false;
+  private readyRetryBinding: FracturePlayBinding | null = null;
   private pendingDestructibleEvents: FractureEvent[] = [];
   private lastDestructibleError: string | null = null;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
@@ -324,7 +326,10 @@ export class PlayController {
     const rt = this.session.runtime;
     if (rt === null) return;
     this.pendingDestructibleEvents.push(...rt.takeDestructibleEvents());
-    if (this.pendingDestructibleEvents.length === 0) return;
+    if (this.pendingDestructibleEvents.length === 0) {
+      if (this.brokenMirrorsDirty) this.syncBrokenMirrors();
+      return;
+    }
     const queue = this.pendingDestructibleEvents;
     this.pendingDestructibleEvents = [];
     const binding = this.fractureBinding;
@@ -334,14 +339,24 @@ export class PlayController {
       // 表现切换先于后端就绪：玩法事实成立时完整对象必须立即不可见，且物理镜像同步移除。
       if (!this.brokenNodes.has(nodeId)) {
         this.brokenNodes.add(nodeId);
+        this.brokenMirrorsDirty = true;
         const index = this.renderer.findObjectIndexByNodeId(nodeId);
         if (index !== null) this.renderer.setObjectVisible(index, false);
-        const graph = this.runtimeGraphWithoutBroken();
-        if (graph !== null) binding?.syncScene(graph);
+        this.syncBrokenMirrors();
       }
       if (binding === null || binding.backend() === null) {
         this.pendingDestructibleEvents.push(ev);
+        this.brokenMirrorsDirty = true;
         this.lastDestructibleError = nodeId + '：碎片运行时未就绪（等待重试）';
+        // 真实后端就绪后必须再按去掉 broken 的运行图 sync 一次，否则 ready 的初始
+        // author-graph sync 会把镜像重新加回来（幽灵 collider）。
+        if (binding !== null && this.readyRetryBinding !== binding) {
+          this.readyRetryBinding = binding;
+          void binding.ready.then(() => {
+            this.brokenMirrorsDirty = true;
+            this.consumeDestructibleEvents();
+          });
+        }
         continue;
       }
       if (binding.failure !== null) {
@@ -349,6 +364,7 @@ export class PlayController {
         console.warn('[fracture] ' + this.lastDestructibleError);
         continue;
       }
+      this.syncBrokenMirrors();
       void this.spawnFracture(ev).then((r) => {
         if (!r.accepted) {
           const rej = r.rejection;
@@ -361,6 +377,18 @@ export class PlayController {
         }
       });
     }
+    if (this.brokenMirrorsDirty) this.syncBrokenMirrors();
+  }
+
+  /** 用去掉 broken 节点的运行图同步物理镜像；后端未就绪时保持 dirty 供重试。 */
+  private syncBrokenMirrors(): boolean {
+    const binding = this.fractureBinding;
+    if (binding === null || binding.backend() === null) return false;
+    const graph = this.runtimeGraphWithoutBroken();
+    if (graph === null) return false;
+    binding.syncScene(graph);
+    this.brokenMirrorsDirty = false;
+    return true;
   }
 
   /** 从作者文档派生运行期图：仅把已破坏节点标为不可见，用于移除其物理镜像。 */
@@ -380,6 +408,8 @@ export class PlayController {
       if (index !== null) this.renderer.setObjectVisible(index, true);
     }
     this.brokenNodes.clear();
+    this.brokenMirrorsDirty = false;
+    this.readyRetryBinding = null;
     this.pendingDestructibleEvents = [];
     this.lastDestructibleError = null;
   }
@@ -555,6 +585,8 @@ export class PlayController {
       this.snap = null;
     }
     this.brokenNodes.clear();
+    this.brokenMirrorsDirty = false;
+    this.readyRetryBinding = null;
     this.pendingDestructibleEvents = [];
     this.lastDestructibleError = null;
     // 先还原相机，再断会话：反过来做的话，恢复期间画面还挂着游戏机位，

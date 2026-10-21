@@ -601,4 +601,26 @@ describe('RuntimeSession —— W06 正式可破坏庭院', () => {
     expect(s.destructibleSnapshot()[0]).toEqual({ nodeId: 'nd_fr_barrel', hp: 40, broken: false });
     expect(s.collisionSnapshot().solids).toContain('nd_fr_barrel');
   });
+
+
+  it('接触点偏离中心时 normal/impulse 指向目标内部（范围武器可复用）', () => {
+    const layout = bareDesc();
+    const world = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0.5,0,1]);
+    layout.destructibles = [{
+      nodeId: 'nd_crate', name: 'crate',
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      maxDurability: 20, trigger: { direct: true, explosion: true, burn: false },
+      onBroken: { collider: 'remove', navigation: 'clear-blocking' },
+      world, position: [0, 0.5, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      bounds: { x: 0, z: 0, halfX: 0.3, halfZ: 0.3, radius: 0.3, minY: 0, maxY: 1 },
+      solid: solidCollider('nd_crate', { type: 'box', halfExtents: [0.3, 0.5, 0.3] }, world),
+      obstacle: null,
+    }];
+    const s = new RuntimeSession({ desc: layout, seed: 8 });
+    expect(s.damageSceneObject('nd_crate', 20, { weaponId: 'w_chainsaw', vfxSequence: 12 }, 'direct', [0, 0.5, 2], undefined)).toBe(20);
+    const ev = s.takeDestructibleEvents()[0]!;
+    expect(ev.normal![2]).toBeLessThan(-0.9);
+    expect(ev.impulse![2]).toBeLessThan(0);
+    expect(ev.source.hitSequence).toBe(12);
+  });
 });
