@@ -185,6 +185,9 @@ async function checkRefMeta(
   if (meta.guid !== expectedGuid) {
     return { stage: 'ref-identity', detail: label + ' guid 不一致：profile 引用=' + expectedGuid + ' sidecar=' + meta.guid + '（' + refPath + '）' };
   }
+  if (meta.userData?.status === 'quarantined') {
+    return { stage: 'quarantined', detail: label + ' 当前 sidecar 被隔离（' + refPath + '）' };
+  }
   return null;
 }
 

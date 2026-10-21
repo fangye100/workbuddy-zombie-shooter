@@ -176,7 +176,9 @@ try{
   await fill(cdp,'碎裂寿命 s','7.5');await textClick(cdp,'应用碎裂资产参数');
   await gateRead(cdp,baseline.object.source.model.path);await textClick(cdp,'开始/重播碎裂预览');await entered(cdp);await pick(cdp,'碎裂作者节点','nd_w6_barrel_b');await fill(cdp,'初始耐久','999');await releaseRead(cdp,true);
   check('源GLB迟到成功跨真实选择切换不复活也不改新节点草稿',(await state(cdp)).nodeId==='nd_w6_barrel_b'&&await readField(cdp,'初始耐久')==='999'&&!(await state(cdp)).preview.ready&&await cdp.eval(`window.__editor.renderer.getDocument().nodes.find(n=>n.id==='nd_w6_barrel_b').components.find(c=>c.kind==='Destructible').maxDurability===40`));
-  await fill(cdp,'初始耐久','40');await open(cdp,'object','nd_fr_barrel');await start(cdp);await sleep(150);details.beforeClose=await holdResources(cdp);
+  await fill(cdp,'初始耐久','40');await open(cdp,'object','nd_fr_barrel');await start(cdp);
+  if(!await waitFor(()=>cdp.eval(`(()=>{const e=window.__editor,s=e.fractureAuthor.snapshot().preview,b=e.renderer.dynamicBatches.filter(b=>b.owner===s.owner);return b.length>0&&e.renderer.core.dynamicBatchState(b)==='ready';})()`),{timeout:10000,label:'当前owner完整源真实draw回执'}))throw new Error('面板关闭资源捕获前没有实际GPU绘制');
+  details.beforeClose=await holdResources(cdp);
   await gateRead(cdp,baseline.object.chunks[0].mesh.path);await textClick(cdp,'触发碎裂预览');await entered(cdp);await click(cdp,'#fracture-panel > summary');await waitFor(async()=>!(await state(cdp)).preview.ready,{timeout:3000});await releaseRead(cdp,true);
   details.closedReleased=await released(cdp);check('chunkGLB迟到成功跨面板关闭，旧World/GPU真实释放且不复活',releasedOkay(details.closedReleased)&&!(await state(cdp)).preview.ready,JSON.stringify(details.closedReleased));await click(cdp,'#fracture-panel > summary');
   await playPaused(cdp);const play=await cdp.eval(`(()=>{const r=window.__editor.playCtl.session.runtime;return {objects:r.destructibleSnapshot(),spawns:r.desc.spawns,runId:r.runId};})()`);

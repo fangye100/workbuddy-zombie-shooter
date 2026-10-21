@@ -59,6 +59,29 @@ it('WU08坏草稿不触发二进制读取，future磁盘不能被有效草稿遮
   io.set(P01,JSON.stringify({...disk,version:999}));const future=await prepareFractureActivation(ev(P01,disk.id),{io,draftProfile:disk});expect(future.ok).toBe(false);expect(reads).toBe(0);
 });
 
+it.each(['source','chunk','convex'] as const)('WU08 F08-01：当前 %s sidecar隔离在二进制/World前拒绝，草稿不能绕过且恢复可重试',async kind=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset;
+  const chunk=profile.chunks[0]!;
+  const ref=kind==='source'?profile.source.model:kind==='chunk'?chunk.mesh:{path:'assets/fracture/p01-barrel/test-convex.glb',guid:chunk.mesh.guid};
+  if(kind==='convex'){
+    chunk.proxy.shape={type:'convex',mesh:ref};
+    io.set(ref.path+'.meta.json',await io.readText(chunk.mesh.path+'.meta.json'));
+    io.set(P01,JSON.stringify(profile));
+  }
+  const meta=JSON.parse(await io.readText(ref.path+'.meta.json'));
+  const base=io.readBinary;let reads=0;
+  io.readBinary=async path=>{reads++;return base(path===ref.path&&kind==='convex'?chunk.mesh.path:path);};
+  const prepare=(draft=false)=>prepareFractureActivation(ev(P01,profile.id),{io,...(draft?{draftProfile:profile}:{}),resolveConvexPoints:createGlbConvexResolver()});
+  expect((await prepare()).ok).toBe(true);reads=0;
+  io.set(ref.path+'.meta.json',JSON.stringify({...meta,userData:{...meta.userData,status:'quarantined'}}));
+  for(const draft of [false,true]){
+    const result=await prepare(draft);expect(result.ok).toBe(false);
+    if(!result.ok){expect(result.failure.stage).toBe('quarantined');expect(result.failure.detail).toContain(ref.path);}
+    expect(reads).toBe(0);
+  }
+  io.set(ref.path+'.meta.json',JSON.stringify(meta));expect((await prepare(true)).ok).toBe(true);expect(reads).toBeGreaterThan(0);
+});
+
 /** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
 function makeIO(
   overrides: Record<string, string> = {},
