@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`1ca4b38c68a66c59c6163d7e53ccdbe81490103f`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`39423c8c9cf9f05c3f97a771b5e1fb3ae712108e`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -35,7 +35,7 @@ NPC 案例也可打开 `assets/scenes/sandbox/fracture-wu07.scene.json`，选 E-
 | 场景配置与历史 | `packages/scene/src/fracture.ts`、`document.ts` 既有 v25/v1 契约；`SpawnEditStore.editNodes`、原 History、`AuthorSceneSaver`。没有新 schema 版本或第二份 HP。 |
 | 资产历史/CAS | 从原 `VfxDocument` 局部抽离 `AuthorResourceDocument`，VFX 入口保留薄适配；碎裂使用同一实现，未复制历史/保存栈。 |
 | 当前准入 | `admitFractureProfile` 从原 activation 前段抽离，Apply/Preview/Play 共用；完整激活继续由原 `prepareFractureActivation` 核源/chunk/convex 的当前身份、状态与真实 GLB。 |
-| 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。编辑侧 `fractureAuthorDraft` 约束可写字段。 |
+| 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。runtime 唯一 `fractureAuthorDraft` 约束可写字段，编辑侧保留薄转出。 |
 | 预览组合 | `FracturePreview` 注入独立 host，复用 `bindFractureToPlay`、固定 tick、真 Rapier、原简化 sim、租约和正式准备器。没有调用游戏伤害或建立 Preview 专用运动求解。 |
 | 完整 NPC 与碎块 | 原 ActorLibrary/动作选择/poseIndexAt 取当前姿态；原 `bakeSkinVertices` 求完整四权重表面。`paletteForNamedPose` 按接收 GLB 的骨名映射，不借另一份 rig 的下标；原 WU07 准备器也使用该 helper。 |
 | GPU | 原 `PlayFractureRenderer`、`CoreDynamicBatch`、原材质/深度/光照/描边及真实 draw 回执。新增可选 owner 域和 `releaseDynamicOwner`，缺省 Play 路径保持原 owner。 |
@@ -108,3 +108,15 @@ F08-02：剪贴板两项仍失败，未写成通过。额外最小对照不调�
 为查清被首次中止挡住的原能力，在 ignored 核心探针副本仅捕获剪贴板读回异常为显式失败后继续执行，**125项中123 PASS、2 FAIL、0 SKIP**，exit1；保留原严格判据，没有降为SKIP或整套通过。后续真实改名/取消改名/磁盘200及404、多语言切换等全部通过。本轮旧Inspector/编辑/资源/文件入口的其余实际行为有当前证据；剪贴板正常性仍为上述原生环境边界，交由新整单独立审核评估其对本WU的适用范围。
 
 原失败报告、反例与修复结果全部保留。新exact的全新整单审核另行执行；本节不预先声称独立PASS或supervisor批准。
+
+## 当前磁盘只读身份与合法作者草稿（F08-04）
+
+第二轮全新整单审核绑定 `229ac3bb36e2d7f8b109c775d4535e91fbaf5d6e`，结论 FAIL（8 PASS、4 FAIL）。原报告 SHA256 `e5106acdbaf61ad2806f158be72effbb6cb1641d4661b72c04c0ee546f602b77`；完整原文保存在 `independent-second-fail.json`，不改写旧结论。F08-01/03已独立关闭；F08-02经浏览器之外的 Windows 原生写后读空对照，界定为宿主通路限制，对本WU原行为保留不再单独阻断，但复制菜单两项仍明确FAIL。
+
+F08-04反例：打开合法配方并保留TTL9草稿后，当前磁盘profile内部source/chunk GUID外改。原prepare仅比较profile自身GUID/kind，再整体采用旧draft，使普通prepare拒绝而Preview仍创建12真body/GPU。修复将既有作者可写路径约束从editor局部迁入原runtime activation owner，编辑文件仅转出同一函数；prepare在正式引用读取前用当前diskProfile作只读baseline，Scene Apply也共用该约束。没有新增第二套加载/保存/编辑/物理实现；无draft的原Play路径保持直接检查当前disk。
+
+允许当前disk和本地草稿各自不同的合法名称、分类、物理和播放参数；不可写的source/chunk/convex引用、几何坐标/形状/身份变化必须报出具体路径并保留本地草稿，恢复磁盘后仍可预览原TTL/质量。它不要求先Save，也不强行接受外改。资产Save继续由原CAS拒绝覆盖外部改变。
+
+新增owner反例覆盖source/chunk/convex错误GUID，以及合法但只读的assemblyScale变化，均在draft二进制读取前拒绝；另有当前disk仅作者参数变化仍允许未保存TTL9/质量17的正例。相关runtime/preview/editor作者约束 **62/62** 通过。原UI/真实GPU补验 **7/7**：source与chunk两种当前外改时，Scene Apply原子拒绝、作者输入保留、Preview在World/GPU前拒绝；恢复后Scene Apply与真实绘制均成功。正式完整作者链再次 **48/48**，类型/架构/构建通过。新正式raw `author-readonly-results.json` / `readonly-reference-results.json` 包含具体环境和输入输出；原失败反例继续保留。
+
+第三轮全新完整WU_ACCEPTANCE在新的冻结exact上另行裁决；本段只记录修复与开发侧实测，不预称独立PASS或supervisor批准。
