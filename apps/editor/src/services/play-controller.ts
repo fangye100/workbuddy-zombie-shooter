@@ -573,7 +573,11 @@ export class PlayController {
       let failure = active.length !== takeover.count ? '物理接管失败或容量不足' : this.fractureRenderer?.error ?? null;
       if (failure === null && batches.length === 0) continue; // 原纹理/网格仍在异步装配
       if (failure === null && new Set(batches.map(b => b.meshId)).size !== takeover.count) continue;
-      if (failure === null && !this.renderer.core.prepareDynamicBatches([...(this.bridge.batches()??[]),...(this.fractureRenderer?.dynamicBatches??[])])) failure = this.renderer.core.dynamicError ?? 'GPU接管失败';
+      if (failure === null) {
+        const state = this.renderer.core.dynamicBatchState(batches);
+        if (state === 'pending') continue;
+        if (state === 'failed') failure = this.renderer.core.dynamicError ?? 'GPU接管失败';
+      }
       if (failure !== null) {
         binding.runtime.cancel(key);
         if (takeover.request >= this.deathDiagnosticRequest) {
@@ -588,6 +592,8 @@ export class PlayController {
       }
       this.deathTakeovers.delete(key);
     }
+    // 每次姿态有唯一几何，退役后无法供下一次复用；按原GPU owner释放不再绘制的块。
+    this.renderer.core.releaseDynamicMeshesWithPrefix?.('fracture:',new Set(this.fractureBatches.map(b=>b.meshId)));
   }
 
   /** 碎片绑定只读视图（调试/验收观察；Stop 后为 null）。 */

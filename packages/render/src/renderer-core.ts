@@ -830,13 +830,11 @@ export class RendererCore {
 
   /** 逐网格的 GPU 构建失败原因（成功构建会清除该项；全部恢复后 getter 返回 null）。 */
   private readonly dynamicErrors = new Map<string, string>();
-  /** 接管前沿正式资源owner准备网格/材质；失败保留原显示，绘制继续复用这些缓存。 */
-  prepareDynamicBatches(batches: readonly CoreDynamicBatch[]): boolean {
-    for (let i=0; i<batches.length; i++) {
-      const batch = batches[i]!;
-      if (this.dynamicMesh(batch) === null || this.materialFor(batch) === null || this.dynamicInstSlot(i,batch.count,batch.poseTransitions?.data.byteLength??64) === null) return false;
-    }
-    return batches.length > 0;
+  private readonly dynamicBatchResults = new Map<string, 'ready' | 'failed'>();
+  /** 原绘制路径实际完成上传及draw编码后的状态；分配成功不等于接管成功。 */
+  dynamicBatchState(batches: readonly CoreDynamicBatch[]): 'pending' | 'ready' | 'failed' {
+    if (batches.some(b=>this.dynamicBatchResults.get(b.meshId)==='failed')) return 'failed';
+    return batches.length>0 && batches.every(b=>this.dynamicBatchResults.get(b.meshId)==='ready') ? 'ready' : 'pending';
   }
   /** 当前仍处于失败状态的网格诊断（无失败为 null）。 */
   /** 本会话累计的 GPU 网格构建失败次数（诊断观察；成功不归零）。 */
@@ -948,17 +946,19 @@ export class RendererCore {
       m.skinVb.destroy();
     }
     this.dynamicMeshes.clear();
+    this.dynamicBatchResults.clear();
   }
 
   /** 只释放指定前缀的动态代理网格（碎片 Reset/换代用，不触碰角色或其它 owner）。 */
-  releaseDynamicMeshesWithPrefix(prefix: string): void {
+  releaseDynamicMeshesWithPrefix(prefix: string, keep: ReadonlySet<string> = new Set()): void {
     for (const [id, m] of [...this.dynamicMeshes]) {
-      if (!id.startsWith(prefix)) continue;
+      if (!id.startsWith(prefix) || keep.has(id)) continue;
       m.vbuf.destroy();
       m.ibuf.destroy();
       m.skinVb.destroy();
       this.dynamicMeshes.delete(id);
       this.dynamicErrors.delete(id);
+      this.dynamicBatchResults.delete(id);
     }
   }
 
@@ -966,6 +966,7 @@ export class RendererCore {
   resetDynamicDiagnostics(): void {
     this.dynamicFailureCount = 0;
     this.dynamicErrors.clear();
+    this.dynamicBatchResults.clear();
   }
 
   /**
@@ -1004,11 +1005,12 @@ export class RendererCore {
     wantOutline: boolean,
   ): number {
     let draws = 0;
+    for (const b of batches) this.dynamicBatchResults.delete(b.meshId);
     for (let bi = 0; bi < batches.length; bi++) {
       const b = batches[bi];
       if (b === undefined || b.count <= 0) continue;
       const mesh = this.dynamicMesh(b);
-      if (mesh === null) continue;
+      if (mesh === null) { this.dynamicBatchResults.set(b.meshId,'failed'); continue; }
       // 防御：调用方给的 count 大于实际打包的实例数时按后者截断，不越界读
       const n = Math.min(b.count, Math.floor(b.instances.length / DYNAMIC_INSTANCE_FLOATS));
       if (n <= 0) continue;
@@ -1016,7 +1018,7 @@ export class RendererCore {
       // 局部资源构建/绘制失败只降级当前批次：记录诊断、跳过 draw，不让异常冲进主帧。
       try {
         const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64);
-        if (slot === null) continue;
+        if (slot === null) { this.dynamicBatchResults.set(b.meshId,'failed'); continue; }
         this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
         if (b.rigid !== undefined && b.rigid.length > 0) {
           const nRigid = Math.min(n, Math.floor(b.rigid.length / RIGID_INSTANCE_FLOATS));
@@ -1027,7 +1029,7 @@ export class RendererCore {
           slot.poseData = b.poseTransitions.data; slot.poseRevision = b.poseTransitions.revision;
         }
         const material = this.materialFor(b);
-        if (material === null) continue;
+        if (material === null) { this.dynamicBatchResults.set(b.meshId,'failed'); continue; }
         pass.setBindGroup(0, slot.bg);
         // 无 albedo 的批次（如切口纯色材质）用共享白色材质，颜色由实例 color 携带，
         // 这样同一份几何/材质可被多个子网格批次复用，不复制纹理。
@@ -1046,10 +1048,13 @@ export class RendererCore {
           pass.drawIndexed(count, n, first);
           draws++;
         }
+        if (this.dynamicBatchResults.get(b.meshId)!=='failed') this.dynamicBatchResults.set(b.meshId,'ready');
       } catch (e) {
         this.recordDynamicFailure(b.meshId, e);
+        this.dynamicBatchResults.set(b.meshId,'failed');
       }
     }
+    for (const b of batches) if (this.dynamicBatchResults.get(b.meshId)==='ready') this.dynamicErrors.delete(b.meshId);
     return draws;
   }
 
