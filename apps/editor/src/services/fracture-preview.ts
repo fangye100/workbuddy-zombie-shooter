@@ -61,7 +61,7 @@ export class FracturePreview {
       contact: null, normal: [0,0,1], impulse: [0,2,3], source:{weaponId:'author-preview',hitSequence:generation} });
     try {
       // 当前磁盘准入在任何World/GPU分配前；NPC姿态随后补上，最终仍走完整正式prepare。
-      const admission=await admitFractureProfile(ref,this.io);if(!current())return;
+      const admission=await admitFractureProfile(ref,this.io,draft);if(!current())return;
       if(!admission.ok)throw new Error(admission.failure.stage+'：'+admission.failure.detail);
       if(admission.profile.kind!==draft.kind)throw new Error('当前profile类型与草稿不一致');
       if (draft.kind === 'npc') {

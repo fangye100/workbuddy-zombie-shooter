@@ -5,7 +5,7 @@
  * 打开后外改 sidecar、seed 确定性、不同来向差异、convex 端口契约。
  */
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createGlbConvexResolver, prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
+import { admitFractureProfile, createGlbConvexResolver, prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
 import { parseGlb, VERTEX_FLOATS, type FractureAsset, type GltfResult } from '@aether/scene';
 import { bakePosePalette, PalettePoseTransitions } from '@aether/render';
 import { ensureRapier, RapierFractureBackend, type RapierModule } from '../src/fracture-rapier';
@@ -82,7 +82,6 @@ it.each(['source','chunk','convex'] as const)('WU08 F08-01：当前 %s sidecar�
   io.set(ref.path+'.meta.json',JSON.stringify(meta));expect((await prepare(true)).ok).toBe(true);expect(reads).toBeGreaterThan(0);
 });
 
-/** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
 it.each(['source','chunk','convex','assemblyScale'] as const)('WU08 F08-04：当前磁盘 %s 只读漂移不能被合法作者草稿遮蔽',async kind=>{
   const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset;
   if(kind==='convex')profile.chunks[0]!.proxy.shape={type:'convex',mesh:{...profile.chunks[0]!.mesh}};
@@ -113,6 +112,48 @@ it('WU08当前磁盘仅作者参数变化时，合法未保存参数仍可预览
   expect(JSON.parse(await io.readText(P01))).toEqual(profile);
 });
 
+it.each(['source','chunk','convex'] as const)('WU08 F08-05：Apply共用当前 %s 完整引用准入，七类坏引用拒绝并恢复',async kind=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset;
+  const chunk=profile.chunks[0]!;
+  const ref=kind==='source'?profile.source.model:kind==='chunk'?chunk.mesh:{path:'assets/fracture/p01-barrel/admission-convex.glb',guid:'as_admission_convex'};
+  if(kind==='convex'){
+    const meta=JSON.parse(await io.readText(chunk.mesh.path+'.meta.json'));meta.guid=ref.guid;
+    io.set(ref.path+'.meta.json',JSON.stringify(meta));io.setBin(ref.path,await io.readBinary(chunk.mesh.path));
+    chunk.proxy.shape={type:'convex',mesh:ref};io.set(P01,JSON.stringify(profile));
+  }
+  const originalMeta=await io.readText(ref.path+'.meta.json'),base=io.readBinary;
+  const draft=structuredClone(profile);draft.playback.lifetimeSec=9;draft.chunks[0]!.proxy.mass=17;
+  const options={io,draftProfile:draft,resolveConvexPoints:createGlbConvexResolver()};
+  let fault='',reads=0;
+  io.readBinary=async path=>{reads++;if(path===ref.path){if(fault==='binary-missing')throw new Error('current binary missing');if(fault==='binary-invalid')return new ArrayBuffer(4);}return base(path);};
+  expect((await admitFractureProfile({path:P01,guid:profile.id},io,draft)).ok).toBe(true);
+  for(const mode of ['guid','kind','quarantined','future','meta-missing','binary-missing','binary-invalid']){
+    const meta=JSON.parse(originalMeta);
+    if(mode==='guid')meta.guid='as_wrong_current';
+    if(mode==='kind')meta.kind='fracture';
+    if(mode==='quarantined')meta.userData={...meta.userData,status:'quarantined'};
+    if(mode==='future')meta.schemaVersion=999;
+    io.set(ref.path+'.meta.json',mode==='meta-missing'?undefined as unknown as string:JSON.stringify(meta));fault=mode;reads=0;
+    const expected=mode==='quarantined'?'quarantined':mode==='meta-missing'?'ref-read':mode.startsWith('binary-')?'ref-binary':'ref-identity';
+    const results=[await admitFractureProfile({path:P01,guid:profile.id},io,draft),await prepareFractureActivation(ev(P01,profile.id),options),await prepareFractureActivation(ev(P01,profile.id),{io,resolveConvexPoints:options.resolveConvexPoints})];
+    for(const result of results){expect(result,kind+'/'+mode).toMatchObject({ok:false,failure:{stage:expected}});if(!result.ok)expect(result.failure.detail).toContain(ref.path);}
+    if(!mode.startsWith('binary-'))expect(reads).toBe(0);
+    io.set(ref.path+'.meta.json',originalMeta);fault='';
+    const recovered=await admitFractureProfile({path:P01,guid:profile.id},io,draft);expect(recovered.ok).toBe(true);if(recovered.ok){expect(recovered.profile.playback.lifetimeSec).toBe(9);expect(recovered.profile.chunks[0]!.proxy.mass).toBe(17);}
+    expect((await prepareFractureActivation(ev(P01,profile.id),options)).ok).toBe(true);
+    expect(draft.playback.lifetimeSec).toBe(9);expect(JSON.parse(await io.readText(P01))).toEqual(profile);
+  }
+});
+it('完整准入保留NPC当次验证的chunk字节，正式prepare不重读同一chunk',async()=>{
+  const io=makeIO(),profile=e04Profile(),base=io.readBinary,reads=new Map<string,number>();
+  io.readBinary=async path=>{reads.set(path,(reads.get(path)??0)+1);return base(path);};
+  const admitted=await admitFractureProfile({path:E04,guid:profile.id},io);expect(admitted.ok).toBe(true);
+  if(admitted.ok)for(const c of profile.chunks)expect(admitted.binaries?.get(c.mesh.path)?.byteLength).toBeGreaterThan(20);
+  reads.clear();expect((await prepareFractureActivation(ev(E04,profile.id,{target:{kind:'npc',runId:'admission-bytes',slot:0,id:1,generation:1},npcPose:e04Pose(()=>[...IDENTITY16])}),{io})).ok).toBe(true);
+  for(const c of profile.chunks)expect(reads.get(c.mesh.path)).toBe(1);
+});
+
+/** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
 function makeIO(
   overrides: Record<string, string> = {},
   binOverrides: Record<string, ArrayBuffer> = {},

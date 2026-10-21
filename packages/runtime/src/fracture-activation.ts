@@ -201,20 +201,15 @@ async function checkRefMeta(
   return null;
 }
 
-/**
- * 读取并核验正式 profile + sidecar，按事件变换/来向/seed 生成激活输入。
- * 任一准入失败在分配物理资源前返回诊断（不建 body/租约）。异步迟到/Stop 由调用方
- * 经 session generation 守卫（本函数纯数据准备，不持有会话）。
- */
-/** 当前profile/sidecar准入唯一入口。作者Apply、Preview和Play共用；不分配GPU/物理资源。 */
-export async function admitFractureProfile(ref:{readonly path:string;readonly guid:string},io:FractureAssetIO):Promise<
-  {readonly ok:true;readonly profile:FractureAsset}|{readonly ok:false;readonly failure:FractureAdmissionFailure}> {
+/** 当前profile、草稿和全部引用准入。Apply/Preview/Play共用，不分配GPU/物理资源。 */
+export async function admitFractureProfile(ref:{readonly path:string;readonly guid:string},io:FractureAssetIO,draftProfile?:FractureAsset):Promise<
+  {readonly ok:true;readonly profile:FractureAsset;readonly binaries:Map<string,ArrayBuffer>|undefined}|{readonly ok:false;readonly failure:FractureAdmissionFailure}> {
   let raw:unknown;
   try{raw=JSON.parse(await io.readText(ref.path));}
   catch(error){return {ok:false,failure:{stage:'profile-read',detail:'profile 读取失败：'+String(error)}};}
   const errors=validateFractureAsset(raw);
   if(errors.length)return {ok:false,failure:{stage:'profile-validate',detail:errors.join('；')}};
-  const profile=migrateFractureAsset(raw);
+  let profile=migrateFractureAsset(raw);
   let meta:AssetMeta;
   try{meta=JSON.parse(await io.readText(ref.path+'.meta.json')) as AssetMeta;}
   catch(error){return {ok:false,failure:{stage:'sidecar-read',detail:'sidecar 读取失败：'+String(error)}};}
@@ -223,50 +218,50 @@ export async function admitFractureProfile(ref:{readonly path:string;readonly gu
   if(meta.kind!=='fracture')return {ok:false,failure:{stage:'identity',detail:'sidecar kind='+meta.kind+'，应为 fracture'}};
   if(ref.guid!==profile.id||profile.id!==meta.guid)return {ok:false,failure:{stage:'identity',detail:'GUID 不一致：event='+ref.guid+' profile='+profile.id+' sidecar='+meta.guid}};
   if(profile.status!=='accepted'||meta.userData?.status==='quarantined')return {ok:false,failure:{stage:'quarantined',detail:ref.path+' 当前profile/sidecar被隔离'}};
-  return {ok:true,profile};
-}
-
-export async function prepareFractureActivation(
-  event: FractureEvent,
-  opts: PrepareOptions,
-): Promise<FracturePrepareResult> {
-  const profilePath=event.profile.path;
-  const admitted=await admitFractureProfile(event.profile,opts.io);
-  if(!admitted.ok)return admitted;
-  const diskProfile=admitted.profile;
-  const draftErrors=opts.draftProfile?validateFractureAsset(opts.draftProfile):[];
+  const diskProfile=profile;
+  const draftErrors=draftProfile?validateFractureAsset(draftProfile):[];
   if(draftErrors.length)return {ok:false,failure:{stage:'profile-validate',detail:draftErrors.join('；')}};
-  let profile=opts.draftProfile?migrateFractureAsset(opts.draftProfile):diskProfile;
+  profile=draftProfile?migrateFractureAsset(draftProfile):diskProfile;
   if(profile.id!==diskProfile.id||profile.kind!==diskProfile.kind)return {ok:false,failure:{stage:'identity',detail:'草稿与当前磁盘的GUID/kind不一致'}};
-  if(profile.status!=='accepted')return {ok:false,failure:{stage:'quarantined',detail:profilePath+' 草稿被隔离'}};
-  if(opts.draftProfile){
+  if(profile.status!=='accepted')return {ok:false,failure:{stage:'quarantined',detail:ref.path+' 草稿被隔离'}};
+  if(draftProfile){
     try{profile=fractureAuthorDraft(profile,diskProfile);}
     catch(error){return {ok:false,failure:{stage:'profile-validate',detail:'当前磁盘配方与草稿不一致：'+String(error)}};}
   }
-  const wantNpc=profile.kind==='npc';
-  if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
-
   // 6) R1：核验全部引用资产的 sidecar 身份（source.model + 每个 chunk.mesh + 每个 convex.mesh），
   //    证明引用指向正确资产而非仅格式合法。
-  const srcFail = await checkRefMeta(opts.io, profile.source.model.path, profile.source.model.guid, 'gltf', '源模型');
+  const srcFail = await checkRefMeta(io, profile.source.model.path, profile.source.model.guid, 'gltf', '源模型');
   if (srcFail) return { ok: false, failure: srcFail };
   for (const c of profile.chunks) {
-    const mf = await checkRefMeta(opts.io, c.mesh.path, c.mesh.guid, 'gltf', '碎块 ' + c.chunkId);
+    const mf = await checkRefMeta(io, c.mesh.path, c.mesh.guid, 'gltf', '碎块 ' + c.chunkId);
     if (mf) return { ok: false, failure: mf };
     if (c.proxy.shape.type === 'convex') {
-      const cf = await checkRefMeta(opts.io, c.proxy.shape.mesh.path, c.proxy.shape.mesh.guid, 'gltf', '碎块 ' + c.chunkId + ' 凸代理');
+      const cf = await checkRefMeta(io, c.proxy.shape.mesh.path, c.proxy.shape.mesh.guid, 'gltf', '碎块 ' + c.chunkId + ' 凸代理');
       if (cf) return { ok: false, failure: cf };
     }
   }
   // 6b) 引用资产的**二进制可用性**：sidecar 合法不代表文件读得到/是 GLB。
-  //     逐个核验 conic（source + 每块 mesh），坏文件在分配前拒绝而不是播到一半崩。
-  const refs = [profile.source.model.path, ...profile.chunks.map((c) => c.mesh.path)];
+  //     source/chunk/独立convex均须存在且为GLB；不以合法sidecar替代实际文件。
+  const refs = [profile.source.model.path, ...profile.chunks.map(c=>c.mesh.path), ...profile.chunks.flatMap(c=>c.proxy.shape.type==='convex'?[c.proxy.shape.mesh.path]:[])];
   // 仅本次准备持有原字节，NPC 随后解析同一份 chunk，不跨事件缓存/重读。
-  const currentBinaries = wantNpc ? new Map<string, ArrayBuffer>() : undefined;
-  for (const path of refs) {
-    const bf = await checkRefBinary(opts.io, path, currentBinaries);
+  const currentBinaries = profile.kind==='npc' ? new Map<string, ArrayBuffer>() : undefined;
+  for (const path of new Set(refs)) {
+    const bf = await checkRefBinary(io, path, currentBinaries);
     if (bf) return { ok: false, failure: bf };
   }
+  return {ok:true,profile,binaries:currentBinaries};
+}
+
+/** 正式数据准备：当前资源准入后，按真实事件变换/姿态生成激活输入，不建body/租约。 */
+export async function prepareFractureActivation(
+  event: FractureEvent,
+  opts: PrepareOptions,
+): Promise<FracturePrepareResult> {
+  const admitted=await admitFractureProfile(event.profile,opts.io,opts.draftProfile);
+  if(!admitted.ok)return admitted;
+  const {profile,binaries:currentBinaries}=admitted;
+  const wantNpc=profile.kind==='npc';
+  if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
 
   // 6c) 事件旋转必须是有限单位四元数：零/非单位四元数会让刚体姿态退化，
   //     必须在分配 body/租约前拒绝（与尺度校验同一层）。
