@@ -34,6 +34,8 @@ beforeAll(async () => {
   const io = makeIO();
   const meta = JSON.parse(await io.readText(e04Profile().source.model.path + '.meta.json'));
   e04Source = parseGlb(await io.readBinary(e04Profile().source.model.path), meta.importer.normalizeHeightM);
+  // 真实固定夹具的模块装载归setup；每次生产IO仍返回新字节，不跨准入缓存。
+  for(const path of [P01,E04]){const p=JSON.parse(await io.readText(path)) as FractureAsset;await Promise.all([p.source.model.path,...p.chunks.map(c=>c.mesh.path)].map(ref=>io.readBinary(ref)));}
 }, 30000);
 
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
@@ -112,7 +114,7 @@ it('WU08当前磁盘仅作者参数变化时，合法未保存参数仍可预览
   expect(JSON.parse(await io.readText(P01))).toEqual(profile);
 });
 
-it.each(['source','chunk','convex'] as const)('WU08 F08-05：Apply共用当前 %s 完整引用准入，七类坏引用拒绝并恢复',async kind=>{
+it.each(['source','chunk','convex'] as const)('WU08 F08-05/06：Apply共用当前 %s 完整引用准入，九类坏引用拒绝并恢复',async kind=>{
   const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset;
   const chunk=profile.chunks[0]!;
   const ref=kind==='source'?profile.source.model:kind==='chunk'?chunk.mesh:{path:'assets/fracture/p01-barrel/admission-convex.glb',guid:'as_admission_convex'};
@@ -125,9 +127,9 @@ it.each(['source','chunk','convex'] as const)('WU08 F08-05：Apply共用当前 %
   const draft=structuredClone(profile);draft.playback.lifetimeSec=9;draft.chunks[0]!.proxy.mass=17;
   const options={io,draftProfile:draft,resolveConvexPoints:createGlbConvexResolver()};
   let fault='',reads=0;
-  io.readBinary=async path=>{reads++;if(path===ref.path){if(fault==='binary-missing')throw new Error('current binary missing');if(fault==='binary-invalid')return new ArrayBuffer(4);}return base(path);};
+  io.readBinary=async path=>{reads++;if(path===ref.path){if(fault==='binary-missing')throw new Error('current binary missing');if(fault==='binary-invalid')return new ArrayBuffer(4);if(fault==='binary-content'){const b=new ArrayBuffer(20),v=new DataView(b);v.setUint32(0,0x46546c67,true);v.setUint32(4,2,true);v.setUint32(8,20,true);v.setUint32(16,0x4e4f534a,true);return b;}if(fault==='binary-nonfinite')return makePointCloudGlb(new Float32Array([NaN,0,0,1,0,0,0,1,0,0,0,1]));}return base(path);};
   expect((await admitFractureProfile({path:P01,guid:profile.id},io,draft)).ok).toBe(true);
-  for(const mode of ['guid','kind','quarantined','future','meta-missing','binary-missing','binary-invalid']){
+  for(const mode of ['guid','kind','quarantined','future','meta-missing','binary-missing','binary-invalid','binary-content','binary-nonfinite']){
     const meta=JSON.parse(originalMeta);
     if(mode==='guid')meta.guid='as_wrong_current';
     if(mode==='kind')meta.kind='fracture';

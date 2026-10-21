@@ -134,7 +134,7 @@ export function createGlbConvexResolver(): ConvexPointsResolver {
 }
 
 /**
- * 核验引用资产二进制：能读到、不是 LFS 指针、是合法 GLB（magic + 声明长度）。
+ * 核验引用二进制：实际GLB容器/解码内容、有限顶点/权重及合法索引，不以文件头代替内容。
  * 不做跨调用缓存：路径曾经可读不代表当前仍可用/仍是同一版本。
  */
 async function checkRefBinary(
@@ -160,6 +160,19 @@ async function checkRefBinary(
   const declared = head.getUint32(8, true);
   if (declared !== buf.byteLength) {
     return { stage: 'ref-binary', detail: 'GLB 声明长度 ' + declared + ' 与实际 ' + buf.byteLength + ' 不一致（' + path + '）' };
+  }
+  try {
+    // 与正式渲染/烘焙使用同一解码器；合法文件头不能代替真实内容准入。
+    const parsed = parseGlb(buf, null, 'auto', { normalize: false });
+    const count = parsed.mesh.vertices.length / VERTEX_FLOATS;
+    if (!Number.isInteger(count) || count < 1 || parsed.mesh.vertices.some(v=>!Number.isFinite(v)) || parsed.mesh.weights?.some(v=>!Number.isFinite(v))) {
+      return { stage:'ref-binary', detail:'引用资产解码后含非有限或空几何（'+path+'）' };
+    }
+    if (parsed.mesh.indices.some(index=>index>=count)) {
+      return { stage:'ref-binary', detail:'引用资产解码后索引越界（'+path+'）' };
+    }
+  } catch(error) {
+    return { stage:'ref-binary', detail:'引用资产 GLB 内容解码失败（'+path+'）：'+String(error) };
   }
   currentBinaries?.set(path, buf);
   return null;
