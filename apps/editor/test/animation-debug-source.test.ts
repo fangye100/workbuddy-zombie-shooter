@@ -17,7 +17,7 @@ const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 const auditScenes = import.meta.glob('../../../assets/scenes/sandbox/{shared-motion-runtime,body-ik-validation}.scene.json', { eager: true, import: 'default' });
 function connectedFixture(doc: SceneDocument, sharedPlayer = false, motionNodeId = doc.playerStart!) {
   const actor: ActorMesh = { characterId: 'E-01', meshId: 'actor:E-01', vertices: new Float32Array(0), indices: new Uint32Array(0),
-    joints: new Uint16Array(0), weights: new Float32Array(0), paletteBase: 0, restPose: 3, feetOffset: 0,
+    joints: new Uint16Array(0), weights: new Float32Array(0), jointNames: [null], paletteBase: 0, restPose: 3, feetOffset: 0,
     palette: { jointCount: 1, data: new Float32Array(4 * 16), clipBasePose: [0, 1, 2], clips: ['idle', 'walk', 'attack'].map(name => ({ name, frameCount: 1, durationSec: 1 })) },
     clips: ['idle', 'walk', 'attack'].map((name, basePose) => ({ name, basePose, frameCount: 1, durationSec: 1 })) };
   const bridge = new RuntimeBridge({ get: id => id === 'E-01' ? actor : null });

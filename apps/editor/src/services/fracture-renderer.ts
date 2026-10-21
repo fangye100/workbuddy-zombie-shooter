@@ -90,6 +90,7 @@ export class PlayFractureRenderer {
   private readonly sharedTextures = new Set<string>();
   /** 跨 beginGeneration 保留的已上传贴图身份：core 在 Reset 时复用材质，不能重复计上传。 */
   private readonly uploadedTextures = new Set<string>();
+  private bakedUploads = new WeakSet<Float32Array>();
   /** 每次读取的归属 token（防止旧代完成时删掉新代同路径的 pending）。 */
   private pendingSeq = 0;
   private readonly pendingToken = new Map<string, number>();
@@ -161,6 +162,12 @@ export class PlayFractureRenderer {
       }
       const entry = this.meshes.get(chunk.mesh.path) ?? null;
       if (entry === null) continue;
+      const vertices = chunk.bakedVertices ?? entry.vertices;
+      const geometryKey = entry.geometryKey + (chunk.bakedVertices ? ':pose:' + chunk.handle.key : '');
+      if (chunk.bakedVertices && !this.bakedUploads.has(chunk.bakedVertices)) {
+        this.bakedUploads.add(chunk.bakedVertices);
+        this.stats.geometryBytes += vertices.byteLength + entry.indices.byteLength + vertices.length / 15 * 24;
+      }
 
       // 位置/姿态：rigid 用真实后端快照，simplified 用正式 sim
       let px: number, py: number, pz: number;
@@ -201,13 +208,13 @@ export class PlayFractureRenderer {
         inst[16] = 1; inst[17] = 0; inst[18] = 0; inst[19] = 0;
 
         const texKey = part.textured ? entry.textureKey : null;
-        const key = chunk.mesh.path + '|' + part.indexStart + '|' + part.indexCount + '|' + (part.textured ? 't' : 's');
+        const key = chunk.mesh.path + '#' + geometryKey + '|' + part.indexStart + '|' + part.indexCount + '|' + (part.textured ? 't' : 's');
         const hit = groups.get(key);
         if (hit === undefined) {
           groups.set(key, {
             batch: {
-              meshId: 'fracture:' + chunk.mesh.path + '#' + entry.geometryKey,
-              vertices: entry.vertices,
+              meshId: 'fracture:' + chunk.mesh.path + '#' + geometryKey,
+              vertices,
               indices: entry.indices,
               skin: null,
               albedo: part.textured ? entry.albedo : null,
@@ -274,6 +281,7 @@ export class PlayFractureRenderer {
   beginGeneration(): void {
     if (this.disposed) return;
     this.generation++;
+    this.bakedUploads = new WeakSet();
     for (const e of this.meshes.values()) e?.albedo?.close();
     this.meshes.clear();
     this.pending.clear();

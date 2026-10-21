@@ -49,4 +49,8 @@ export class NpcMotionPresentation {
     const key=identity(entity),hit=this.impacts.get(key);
     return hit?Math.max(0,1-(tick-hit.tick)*step/.18):0;
   }
+  /** WU-07：碎裂成功接管后按身份移除该尸体的死亡尾部展示（失败保底 = 不调用）。 */
+  suppress(entity: { runId: number; id: number; generation: number }): boolean {
+    return this.deaths.delete(identity(entity));
+  }
 }

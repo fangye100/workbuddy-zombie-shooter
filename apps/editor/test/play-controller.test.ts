@@ -12,10 +12,11 @@
  * PlaySession、Stop 时逐个释放，所以「20 次启停后 pending === 0」必须是可断言的。
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { PlayController } from '../src/services/play-controller';
 import type { AuthorSnapshot, LabRenderer } from '../src/renderer';
-import type { RuntimeBridge } from '../src/services/runtime-bridge';
+import { RuntimeBridge } from '../src/services/runtime-bridge';
+import type { ActorMesh } from '../src/services/runtime-actors';
 import type { RuntimeWeapons } from '../src/services/runtime-weapons';
 import {
   resolveEntryCamera,
@@ -23,8 +24,9 @@ import {
   type ViewCameraState,
   type WorldPosOf,
 } from '../src/services/play-camera';
-import type { SceneDocument } from '@aether/scene';
+import { parseGlb, type SceneDocument } from '@aether/scene';
 import { frozenFractureEvent, type FractureAssetIO } from '@aether/runtime';
+import { bakePosePalette, bindPoseIndex } from '@aether/render';
 
 // 本套件使用无GPU的renderer替身，验证控制器快照/相机；真实VFX由专属GPU验收覆盖。
 // 正式Act1配置现在含VFX，不能再依赖“关卡恰好没有特效”来避开GPU装配。
@@ -112,7 +114,7 @@ function fakeRenderer(doc: SceneDocument | null) {
     // Play 期渲染侧 GPU 资源的释放入口（动态实例 buffer + 代理网格缓存）。
     // PlayController 必须把它登记进 PlaySession 的账目，否则账目显示 pending = 0
     // 而 GPU 上仍留着 Play 期分配物（PR #3 review）。
-    core: { releaseDynamicResources: vi.fn() },
+    core: { releaseDynamicResources: vi.fn(), prepareDynamicBatches:vi.fn(()=>true), dynamicError:null as string|null },
     read: () => ({ count: objects.length, names: objects.map((o) => o.name), visible: objects.map(o => o.visible), selectedIndex }),
   };
 }
@@ -1123,4 +1125,238 @@ describe('PlayController —— 旧代异步事件跨代隔离（WU-06 S6-03/R6-
     ctl.stop();
     expect(ctl.ledger.pending).toBe(0);
   }, 30000);
+});
+
+describe('PlayController —— NPC 致死碎裂（WU-07 真实消费者链路）', () => {
+  const originalBitmap = globalThis.createImageBitmap;
+  beforeAll(()=>{ globalThis.createImageBitmap = vi.fn(async()=>({width:1,height:1,close(){}})) as unknown as typeof createImageBitmap; });
+  afterAll(()=>{ globalThis.createImageBitmap = originalBitmap; });
+  // WU-07 正式场景：E-04 配置 deathFracture + E-01 未配置对照。
+  // 真实 RuntimeBridge + 真实 E-04 ActorMesh（真实 GLB→palette，纯 CPU），
+  // kill 事实由 RuntimeSession.applyDamage 产生，经 consumeDeathFractures 消费。
+  const W7 = import.meta.glob('../../../assets/scenes/sandbox/fracture-wu07.scene.json', { eager: true });
+  const scene7 = (): SceneDocument => JSON.parse(JSON.stringify((Object.values(W7)[0] as { default: unknown }).default)) as SceneDocument;
+  const charGlbs = import.meta.glob('../../../assets/characters/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const textG7 = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const metaG7 = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const charMetaG7 = import.meta.glob('../../../assets/characters/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const binG7 = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const modelG7 = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const rel7 = (k: string) => k.replace(/^.*?(?=assets\/)/, '');
+  const text7 = new Map(Object.entries({ ...textG7, ...metaG7, ...charMetaG7 }).map(([k, v]) => [rel7(k), v] as const));
+  const bins7 = new Map(Object.entries({ ...binG7, ...modelG7, ...charGlbs }).map(([k, v]) => [rel7(k), v] as const));
+  function realIO7(): FractureAssetIO {
+    return {
+      async readText(path: string) { const v = text7.get(path); if (v === undefined) throw new Error('未找到：' + path); return v; },
+      async readBinary(path: string) { const l = bins7.get(path); if (l === undefined) throw new Error('未找到二进制：' + path); const b = await l(); return b.slice().buffer; },
+    };
+  }
+
+  let e04Actor: ActorMesh | null = null;
+  async function ensureE04Actor(): Promise<ActorMesh> {
+    if (e04Actor !== null) return e04Actor;
+    const key = Object.keys(charGlbs).find(k => k.includes('E-04/rigged/E04_Bulwark_1600_rigged_animated.glb'))!;
+    const bytes = await charGlbs[key]!();
+    const glb = parseGlb(bytes.slice().buffer, null);
+    if (glb.skeleton === null || glb.mesh.joints == null || glb.mesh.weights == null) throw new Error('E-04 GLB 缺骨架/蒙皮数据');
+    const palette = bakePosePalette(glb.skeleton, glb.animations, { fps: 24 });
+    let minY = Infinity;
+    for (let i = 1; i < glb.mesh.vertices.length; i += 15) minY = Math.min(minY, glb.mesh.vertices[i]!);
+    e04Actor = {
+      characterId: 'E-04', meshId: 'actor:E-04',
+      vertices: glb.mesh.vertices, indices: glb.mesh.indices,
+      joints: glb.mesh.joints, weights: glb.mesh.weights,
+      jointNames: glb.skeleton.jointNames,
+      normalization: new Float32Array(glb.skeleton.normalization),
+      paletteBase: 0, restPose: bindPoseIndex(palette), feetOffset: minY,
+      palette,
+      clips: palette.clips.map((c, i) => ({ name: c.name, basePose: palette.clipBasePose[i]!, frameCount: c.frameCount, durationSec: c.durationSec })),
+    };
+    return e04Actor;
+  }
+
+  async function make7(opts: { io?: FractureAssetIO; gpuReady?:boolean } = {}) {
+    const actor = await ensureE04Actor();
+    const bridge = new RuntimeBridge({ get: (id: string) => (id === 'E-04' ? actor : null), request: () => {} });
+    const r = fakeRenderer(scene7());
+    Object.assign(r.core, {prepareDynamicBatches:vi.fn(()=>opts.gpuReady??true),dynamicError:opts.gpuReady===false?'injected GPU allocation failure':null});
+    const ctl = new PlayController(r as unknown as LabRenderer, bridge as unknown as RuntimeBridge, { seed: 3, fractureIO: opts.io ?? realIO7() });
+    return { ctl, bridge, renderer:r };
+  }
+  const e04of = (ctl: PlayController) => ctl.session.runtime?.view().find(e => e.kind === 'npc' && e.characterId === 'E-04');
+  const e01of = (ctl: PlayController) => ctl.session.runtime?.view().find(e => e.kind === 'npc' && e.characterId === 'E-01');
+  async function waitQueue7(ctl: PlayController, n: number) {
+    for (let i = 0; i < 400 && ctl.fracture!.runtime.stats.queuedEvents < n; i++) await new Promise(res => setTimeout(res, 10));
+  }
+  const actorBatchCount = (bridge: RuntimeBridge, meshId: string) => (bridge.batches() ?? []).find(b => b.meshId === meshId)?.count ?? 0;
+
+  it('真实 kill 冻结最后可见姿态：10 块激活（3 大 7 小）且只抑制该身份死亡尾部', async () => {
+    const { ctl, bridge } = await make7();
+    expect(ctl.start()).toBe(true);
+    await ctl.fracture!.ready;
+    const rt = ctl.session.runtime!;
+    const victim = e04of(ctl);
+    expect(victim).toBeTruthy();
+    for (let i = 0; i < 30; i++) ctl.update(1 / 30); // 走向玩家：walk 相位推进 + bridge 记录姿态行
+    const identity = { runId: victim!.runId, id: victim!.id, generation: victim!.generation };
+    const snap = bridge.deathPoseSnapshot(identity);
+    expect(snap).not.toBeNull();
+    // 非参照证：快照与 bind 行至少在一个映射骨骼上显著不同（walk 相位生效）
+    const actor = await ensureE04Actor();
+    const hips = snap!.jointNames.indexOf('Hips');
+    const bindBase = actor.restPose * actor.palette.jointCount * 16 + hips * 16;
+    let maxDiff = 0;
+    for (let i = 0; i < 16; i++) maxDiff = Math.max(maxDiff, Math.abs(snap!.matrices[hips * 16 + i]! - actor.palette.data[bindBase + i]!));
+    expect(maxDiff).toBeGreaterThan(1e-3);
+    // 真实致死（一次性；奖励/槽位由会话原路径完成）
+    rt.applyDamage(victim!.id, 99999, rt.playerEntityId, { weaponId: 'w_pistol', vfxSequence: 77 });
+    ctl.update(1 / 30);
+    await waitQueue7(ctl, 1);
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(1);
+    ctl.update(1 / 30);
+    expect(ctl.fracture!.runtime.active.length).toBe(10);
+    expect(ctl.fracture!.runtime.stats.rigidActive).toBe(3);
+    ctl.update(1 / 30);
+    // 成功接管：该身份死亡尾部隐藏（批次计数 0）
+    for (let i=0;i<200 && actorBatchCount(bridge,'actor:E-04')>0;i++) { await new Promise(r=>setTimeout(r,10)); ctl.update(1/30); }
+    expect(actorBatchCount(bridge, 'actor:E-04')).toBe(0);
+    expect(ctl.destructibleError).toBeNull();
+    expect(rt.view().some(x => x.id === identity.id && x.generation === identity.generation)).toBe(false);
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 60000);
+
+  it('profile 读取失败：死亡保底保留（不隐藏尸体），诊断可见且不产生碎片', async () => {
+    const base = realIO7();
+    const io: FractureAssetIO = {
+      async readText(path: string) {
+        if (path.includes('e04-bulwark.fracture.json')) throw new Error('EIO profile 不可读');
+        return base.readText(path);
+      },
+      readBinary: (p) => base.readBinary(p),
+    };
+    const { ctl, bridge } = await make7({ io });
+    expect(ctl.start()).toBe(true);
+    await ctl.fracture!.ready;
+    for (let i = 0; i < 5; i++) ctl.update(1 / 30);
+    const victim = e04of(ctl)!;
+    ctl.session.runtime!.applyDamage(victim.id, 99999, ctl.session.runtime!.playerEntityId, { weaponId: 'w_pistol' });
+    ctl.update(1 / 30);
+    for (let i = 0; i < 200 && ctl.destructibleError === null; i++) await new Promise(res => setTimeout(res, 10));
+    expect(ctl.destructibleError).toContain('E-04');
+    expect(ctl.destructibleError).toContain('profile');
+    // 失败保底：死亡尾部保留（批次仍有 1 个 E-04 尸体实例），无碎片
+    expect(actorBatchCount(bridge, 'actor:E-04')).toBe(1);
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(0);
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 60000);
+
+  it('坏 boneMap=null 进入原死亡保底诊断，没有未处理异步异常', async()=>{
+    const base=realIO7();
+    const {ctl,bridge}=await make7({io:{readBinary:p=>base.readBinary(p),async readText(p){const s=await base.readText(p);if(!p.endsWith('.fracture.json'))return s;const v=JSON.parse(s);v.npc.boneMap=null;return JSON.stringify(v);}}});
+    ctl.start();await ctl.fracture!.ready;ctl.update(1/30);
+    const v=e04of(ctl)!;ctl.session.runtime!.applyDamage(v.id,99999,ctl.session.runtime!.playerEntityId);ctl.update(1/30);
+    for(let i=0;i<100&&!ctl.destructibleError;i++)await new Promise(r=>setTimeout(r,10));
+    expect(ctl.destructibleError).toContain('profile-read');expect(actorBatchCount(bridge,'actor:E-04')).toBe(1);
+    expect(ctl.fracture!.runtime.active.length).toBe(0);ctl.stop();
+  },60000);
+
+  it('GPU owner 分配失败只撤销该事件的真刚体/租约，保留普通 death',async()=>{
+    const {ctl,bridge,renderer}=await make7({gpuReady:false});ctl.start();await ctl.fracture!.ready;ctl.update(1/30);
+    const v=e04of(ctl)!;ctl.session.runtime!.applyDamage(v.id,99999,ctl.session.runtime!.playerEntityId);ctl.update(1/30);await waitQueue7(ctl,1);ctl.update(1/30);
+    expect(ctl.fracture!.runtime.active.length).toBe(10);
+    for(let i=0;i<200&&!ctl.destructibleError;i++){await new Promise(r=>setTimeout(r,10));ctl.update(0);}
+    expect(renderer.core.prepareDynamicBatches).toHaveBeenCalled();expect(ctl.destructibleError).toContain('GPU allocation failure');
+    expect(actorBatchCount(bridge,'actor:E-04')).toBe(1);expect(ctl.fracture!.runtime.active.length).toBe(0);expect(ctl.fracture!.runtime.stats.poolActive).toBe(0);
+    ctl.stop();expect(ctl.ledger.pending).toBe(0);
+  },60000);
+
+  it.each([false,true])('Stop/Start 新 run 首次 kill 不被旧游标跳过（空帧=%s）',async(emptyFrame)=>{
+    const base=realIO7();const {ctl}=await make7({io:{readBinary:p=>base.readBinary(p),async readText(p){if(p.endsWith('.fracture.json'))throw new Error('cursor oracle');return base.readText(p);}}});
+    for(let run=0;run<2;run++){
+      ctl.start();await ctl.fracture!.ready;if(run===0||emptyFrame)ctl.update(1/30);
+      const v=e04of(ctl)!;ctl.session.runtime!.applyDamage(v.id,99999,ctl.session.runtime!.playerEntityId);ctl.update(1/30);
+      for(let i=0;i<100&&!ctl.destructibleError;i++)await new Promise(r=>setTimeout(r,10));
+      expect(ctl.destructibleError).toContain('profile-read');ctl.stop();
+    }
+  },60000);
+
+  it('受控同slot跨generation迟到失败不能覆盖新身份诊断（真实死亡消费者）',async()=>{
+    const base=realIO7();let release!:()=>void,calls=0;
+    const {ctl,bridge}=await make7({io:{readBinary:p=>base.readBinary(p),async readText(p){if(!p.endsWith('.fracture.json'))return base.readText(p);calls++;if(calls===1){await new Promise<void>(r=>release=r);throw new Error('old generation');}const raw=JSON.parse(await base.readText(p));raw.npc.actorId='E-01';return JSON.stringify(raw);}}});
+    ctl.start();await ctl.fracture!.ready;ctl.update(1/30);const rt=ctl.session.runtime!,victim=e04of(ctl)!,snap=bridge.deathPoseSnapshot(victim)!;
+    rt.applyDamage(victim.id,99999,rt.playerEntityId);const old=rt.combatEvents.find(e=>e.type==='kill')!;
+    ctl.update(1/30);for(let i=0;i<100&&!release;i++)await new Promise(r=>setTimeout(r,10));expect(release).toBeTypeOf('function');
+    const next={...old,generation:old.generation+1,defeated:{...old.defeated!,generation:old.generation+1}};
+    // 仅替换输入事实/姿态边界，保留 consumeDeathFractures→异步准备→诊断的生产链。
+    vi.spyOn(rt,'combatEvents','get').mockReturnValue([old,next]);vi.spyOn(bridge,'deathPoseSnapshot').mockReturnValue(snap);
+    ctl.update(1/30);for(let i=0;i<100&&!ctl.destructibleError;i++)await new Promise(r=>setTimeout(r,10));
+    expect(ctl.destructibleError).toContain('actor-mismatch');const newest=ctl.destructibleError;
+    release();await new Promise(r=>setTimeout(r,50));expect(ctl.destructibleError).toBe(newest);ctl.stop();
+  },60000);
+
+  it('未配置对照 E-01 普通死亡：不触发碎裂、无诊断', async () => {
+    const { ctl } = await make7();
+    expect(ctl.start()).toBe(true);
+    await ctl.fracture!.ready;
+    for (let i = 0; i < 5; i++) ctl.update(1 / 30);
+    const plain = e01of(ctl)!;
+    ctl.session.runtime!.applyDamage(plain.id, 99999, ctl.session.runtime!.playerEntityId, { weaponId: 'w_pistol' });
+    ctl.update(1 / 30);
+    await new Promise(res => setTimeout(res, 150));
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(0);
+    expect(ctl.destructibleError).toBeNull();
+    ctl.stop();
+  }, 60000);
+
+  it('非致死伤害不碎裂：受击反馈照常，事件缓冲无 kill', async () => {
+    const { ctl } = await make7();
+    expect(ctl.start()).toBe(true);
+    await ctl.fracture!.ready;
+    for (let i = 0; i < 5; i++) ctl.update(1 / 30);
+    const victim = e04of(ctl)!;
+    ctl.session.runtime!.applyDamage(victim.id, 100, ctl.session.runtime!.playerEntityId, { weaponId: 'w_pistol' });
+    ctl.update(1 / 30);
+    await new Promise(res => setTimeout(res, 100));
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(0);
+    expect(ctl.destructibleError).toBeNull();
+    // 仍未死：继续存在于视图
+    expect(e04of(ctl)).toBeTruthy();
+    ctl.stop();
+  }, 60000);
+
+  it('读取期间 Reset 换代：迟到的死亡碎裂不作用于新代', async () => {
+    const base = realIO7();
+    let hold: (() => void) | null = null;
+    const io: FractureAssetIO = {
+      async readText(path: string) {
+        if (path.includes('e04-bulwark.fracture.json') && hold === null) {
+          await new Promise<void>(r => { hold = r; });
+        }
+        return base.readText(path);
+      },
+      readBinary: (p) => base.readBinary(p),
+    };
+    const { ctl } = await make7({ io });
+    expect(ctl.start()).toBe(true);
+    await ctl.fracture!.ready;
+    for (let i = 0; i < 5; i++) ctl.update(1 / 30);
+    const victim = e04of(ctl)!;
+    ctl.session.runtime!.applyDamage(victim.id, 99999, ctl.session.runtime!.playerEntityId, { weaponId: 'w_pistol' });
+    ctl.update(1 / 30);
+    for (let i = 0; i < 400 && hold === null; i++) await new Promise(res => setTimeout(res, 10));
+    expect(hold).not.toBeNull();
+    ctl.reset();
+    const second = ctl.fracture!;
+    await second.ready;
+    hold!();
+    await new Promise(res => setTimeout(res, 150));
+    // 新代未被污染：无碎片、无诊断、E-04 复活完整
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+    expect(ctl.destructibleError).toBeNull();
+    expect(e04of(ctl)).toBeTruthy();
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 60000);
 });

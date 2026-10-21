@@ -157,6 +157,7 @@ export interface SpawnRejection {
  * 统计据此派生，不需要每步扫表。
  */
 export interface CombatEvent {
+  readonly impact?: { readonly origin:readonly [number,number,number]; readonly contact:readonly [number,number,number] };
   readonly weaponId?:string;
   readonly weaponEvent?:number;
   /** Read-only presentation source; unmarked events retain normal impact feedback. */
@@ -771,8 +772,9 @@ export class RuntimeSession {
     this.tbl.hitFlash[targetSlot] = 0.15;
     const characterId = this.characterIdOf(targetSlot);
     const died = hpAfter <= 0;
-    this.combatEventBuf.push({
-      ...(died && this.kindOf[targetSlot] === 1 ? { defeated: this.viewAt(targetSlot) } : {}),
+    this.combatEventBuf.push(Object.freeze({
+      ...(weapon?.origin && weapon.contact ? {impact:Object.freeze({origin:Object.freeze([...weapon.origin]) as readonly [number,number,number],contact:Object.freeze([...weapon.contact]) as readonly [number,number,number]})}:{}),
+      ...(died && this.kindOf[targetSlot] === 1 ? { defeated: Object.freeze(this.viewAt(targetSlot)) } : {}),
       type: died ? 'kill' : 'damage',
       ...(weapon?{weaponId:weapon.weaponId,...(weapon.vfxSequence===undefined?{}:{weaponEvent:weapon.vfxSequence}),...(weapon.damageKind?{damageKind:weapon.damageKind}:{})}:{}),
       tick: this.tickCount,
@@ -785,7 +787,7 @@ export class RuntimeSession {
       hpAfter,
       sourceSlot,
       sourceGeneration: sourceSlot < 0 ? -1 : this.tbl.generation[sourceSlot]!,
-    });
+    }));
     if (died && this.kindOf[targetSlot] === 1 && sourceSlot === this.playerId) this.progress?.recordKill();
     if (died) this.kill(targetSlot);
     // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。

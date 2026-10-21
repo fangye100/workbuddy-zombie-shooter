@@ -122,6 +122,8 @@ export class RuntimeBridge {
   readonly instanceStride = DYNAMIC_INSTANCE_FLOATS;
   private readonly poseTransitions = new PalettePoseTransitions();
   private readonly npcMotion = new NpcMotionPresentation();
+  /** WU-07：每个 NPC 身份最近一次呈现的姿态行（杀死瞬间读取 = 最后可见姿态）。 */
+  private readonly lastPoses = new Map<string, { characterId: string; actor: ActorMesh; poseIndex: number; from: Float32Array<ArrayBuffer> | null; weight: number; position: [number,number,number]; yaw: number; tick: number }>();
   private gait = new Map<string, { x: number; z: number; clip: string; cycles: number }>();
   private presentedPlayerSource: string | null = null;
   get presentedPlayerNodeId(): string | null { return this.presentedPlayerSource; }
@@ -235,6 +237,7 @@ export class RuntimeBridge {
     this.gait.clear();
     this.poseTransitions.clear();
     this.npcMotion.clear();
+    this.lastPoses.clear();
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
       this.presentedPlayerSource = null;
@@ -288,6 +291,34 @@ export class RuntimeBridge {
   notifyActorsChanged(): void {
     this.slots.clear();
     if (this.session !== null) this.rebuildSlots();
+  }
+
+  /**
+   * WU-07 死亡姿态快照：取该身份**最后呈现帧**的逐关节蒙皮矩阵（模型空间、
+   * 列主），含 pose-transition 混合——与 GPU 实例当帧显示的是同一份数学。
+   * 在 kill 消费时（advance 之后、下一次 refresh 之前）读取，得到的即击杀瞬间
+   * 实体最后的可见姿态，而非死亡尾部/下一代实体的姿态。
+   */
+  deathPoseSnapshot(identity: { runId: number; id: number; generation: number }):
+    { characterId: string; feetOffset: number; jointNames: (string | null)[]; jointCount: number; matrices: Float32Array<ArrayBuffer>; normalization: Float32Array<ArrayBuffer>; position: [number,number,number]; yaw: number; tick: number } | null {
+    const rec = this.lastPoses.get(identity.runId + ':' + identity.id + ':' + identity.generation);
+    if (!rec) return null;
+    const p = rec.actor.palette;
+    const count = p.jointCount;
+    const out = new Float32Array(count * 16);
+    const base = rec.poseIndex * count * 16;
+    for (let i = 0; i < count * 16; i++) {
+      const target = p.data[base + i]!;
+      out[i] = rec.from !== null ? rec.from[i]! * (1 - rec.weight) + target * rec.weight : target;
+    }
+    return { characterId: rec.characterId, feetOffset: rec.actor.feetOffset, jointNames: [...rec.actor.jointNames], jointCount: count, matrices: out,
+      normalization: rec.actor.normalization ? new Float32Array(rec.actor.normalization) : new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+      position: [...rec.position], yaw: rec.yaw, tick: rec.tick };
+  }
+
+  /** WU-07：碎裂成功接管后隐藏该身份的死亡尾部（转发表现策略 owner）。 */
+  suppressDeath(identity: { runId: number; id: number; generation: number }): boolean {
+    return this.npcMotion.suppress(identity);
   }
 
   /**
@@ -365,6 +396,7 @@ export class RuntimeBridge {
     const fixedStep = this.session.fixedStep;
     const gaitKeys = new Set<string>();
     const poseKeys = new Set<string>();
+    const lastPoseKeys = new Set<string>();
     let debugSeen = false;
 
     for (const e of view) {
@@ -488,6 +520,12 @@ export class RuntimeBridge {
           const poseKey = `${e.runId}:${e.id}:${e.generation}`; poseKeys.add(poseKey);
           const transition = this.poseTransitions.sample(poseKey, actor.palette, clipIdx, poseIdx,
             tick * fixedStep, actor.motion?.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC);
+          // WU-07：记录该身份本帧呈现的姿态行（快照在 kill 消费时按需混合读取）。
+          lastPoseKeys.add(poseKey);
+          if (e.kind === 'npc') {
+            this.lastPoses.set(poseKey, { characterId: e.characterId, actor, poseIndex: poseIdx, from: transition.from, weight: transition.weight,
+              position: [inst[o]!,inst[o+1]!,inst[o+2]!], yaw: inst[o+3]!, tick });
+          }
           inst[o + 16] = transition.weight;
           if (transition.from) {
             const stride = actor.palette.jointCount * 16;
@@ -520,6 +558,7 @@ export class RuntimeBridge {
     this.presentedTick = tick;
     for (const key of this.gait.keys()) if (!gaitKeys.has(key)) this.gait.delete(key);
     this.poseTransitions.prune(poseKeys);
+    for (const key of this.lastPoses.keys()) if (!lastPoseKeys.has(key)) this.lastPoses.delete(key);
     if (this.debugSink && !debugSeen) { this.debugLast = null; deliver(this.debugSink, null); }
   }
 }

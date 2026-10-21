@@ -19,7 +19,7 @@ function sceneContactPoint(s:WeaponSceneTarget,from:WeaponPoint):WeaponPoint {
   return [s.position[0]+dx/l*s.radius,s.position[1]+dy/l*s.radius,s.position[2]+dz/l*s.radius];
 }
 export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'|'impact'|'projectile'|'projectile-end'; readonly effectId?:number; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
-export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number;readonly damageKind?:'burn'}
+export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number;readonly damageKind?:'burn';readonly origin?:readonly [number,number,number];readonly contact?:readonly [number,number,number]}
 export interface WeaponWorld {
   actors():WeaponActor[]; actor(id:number):WeaponActor|null;
   trace(from:WeaponPoint,direction:WeaponPoint,range:number,ignore:ReadonlySet<number>,radius?:number):WeaponHit;
@@ -148,7 +148,7 @@ export class WeaponCombat {
   }
   impact(w:WeaponDefinition,actor:WeaponActor,damage:number,tick:number,world:WeaponWorld,origin:WeaponPoint,contact:WeaponPoint=[actor.x,(actor.y??0)+(actor.height??1.8)*.55,actor.z]):void {
     const vfxSequence=this.recordVfx(w,'impact',origin,{actor,point:contact,distance:0,kind:'entity'},tick);
-    world.damage(actor.id,damage,{weaponId:w.id,vfxSequence});
+    world.damage(actor.id,damage,{weaponId:w.id,vfxSequence,origin:[...origin],contact:[...contact]});
     if(w.effects.blastRadiusM>0 && w.behavior!=='projectile')this.explode(w,[actor.x,origin[1],actor.z],damage/2,tick,world,new Set([actor.id]));
     const live=world.actor(actor.id);if(!live || live.generation!==actor.generation || live.hp<=0)return;
     const e=w.effects;
@@ -164,7 +164,7 @@ export class WeaponCombat {
     this.effect(w,'explosion',point,point,tick,.4,w.effects.blastRadiusM,true);
     for(const a of world.actors())if(!ignore.has(a.id) && Math.hypot(a.x-point[0],a.y===undefined?0:Math.max(a.y-point[1],point[1]-a.y-(a.height??1.8),0),a.z-point[2])<=w.effects.blastRadiusM+a.radius && !world.blocked(point,[a.x,Math.max(a.y??point[1],Math.min(point[1],(a.y??point[1])+(a.height??1.8))),a.z])){
       const vfxSequence=this.recordVfx(w,'impact',point,{actor:a,point:[a.x,(a.y??0)+(a.height??1.8)*.55,a.z],distance:0,kind:'entity'},tick);
-      world.damage(a.id,damage,{weaponId:w.id,vfxSequence});if(world.actor(a.id))world.displace(a.id,point,w.effects.knockbackM);
+      world.damage(a.id,damage,{weaponId:w.id,vfxSequence,origin:[...point],contact:[a.x,a.y??point[1],a.z]});if(world.actor(a.id))world.displace(a.id,point,w.effects.knockbackM);
     }
     // 场景物体沿用同一爆心/距离/遮挡查询；被墙挡住的 target 不变，忽略目标自身 collider。
     for(const s of world.sceneTargets?.()??[]){

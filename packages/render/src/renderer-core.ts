@@ -830,6 +830,14 @@ export class RendererCore {
 
   /** 逐网格的 GPU 构建失败原因（成功构建会清除该项；全部恢复后 getter 返回 null）。 */
   private readonly dynamicErrors = new Map<string, string>();
+  /** 接管前沿正式资源owner准备网格/材质；失败保留原显示，绘制继续复用这些缓存。 */
+  prepareDynamicBatches(batches: readonly CoreDynamicBatch[]): boolean {
+    for (let i=0; i<batches.length; i++) {
+      const batch = batches[i]!;
+      if (this.dynamicMesh(batch) === null || this.materialFor(batch) === null || this.dynamicInstSlot(i,batch.count,batch.poseTransitions?.data.byteLength??64) === null) return false;
+    }
+    return batches.length > 0;
+  }
   /** 当前仍处于失败状态的网格诊断（无失败为 null）。 */
   /** 本会话累计的 GPU 网格构建失败次数（诊断观察；成功不归零）。 */
   dynamicFailureCount = 0;

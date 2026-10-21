@@ -58,6 +58,9 @@ export interface ActorMesh {
   /** 4 关节下标 + 4 权重 / 顶点（SKIN_LAYOUT 消费；类型对齐 MeshData 的宽标注） */
   joints: Uint16Array;
   weights: Float32Array;
+  /** 骨骼显示名（与 skeleton.joints 同序；WU-07 死亡姿态快照按名取 boneMap 矩阵） */
+  jointNames: (string | null)[];
+  normalization?: Float32Array<ArrayBuffer>;
   /** Global matrix offset (instance [7]); pose stride is this actor's jointCount. */
   paletteBase: number;
   /** bind pose 相对 paletteBase 的下标（M2 静止姿态；M3 换 clip 帧时同样取相对量） */
@@ -374,6 +377,8 @@ export class ActorLibrary {
         indices: mesh.indices,
         joints: mesh.joints,
         weights: mesh.weights,
+        jointNames: sk.jointNames,
+        normalization: new Float32Array(sk.normalization),
         paletteBase: 0,
         // 🔴 bindPoseIndex 返回的是**本角色 palette 内**的局部下标（角色自身
         // pose 总数-1），不是全局——shader 端 matrix = base + pose * jointCount，

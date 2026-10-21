@@ -49,6 +49,15 @@ export interface FractureEvent {
   readonly normal: FractureVec3 | null;
   readonly impulse: FractureVec3 | null;
   readonly source: FractureSource;
+  /**
+   * NPC 当前姿态快照（WU-07，仅 target.kind='npc' 有意义）：
+   * boneMap 目标骨骼名 → 16 浮点**列主**蒙皮矩阵（world_j·inverseBind_j，模型空间），
+   * 为触发 tick 最后实际显示姿态的不可变拷贝（含 pose-transition 混合结果）。
+   * 发布方（表现宿主）在事件外不可再改；消费者不得回退 bind pose 代替。
+   */
+  readonly npcPose?: Readonly<Record<string, readonly number[]>>;
+  /** 原可见 actor 的顶点规范化 T；与已经共轭的 palette 配对，只应用一次。 */
+  readonly npcNormalization?: readonly number[];
 }
 
 export function fractureTargetKey(target: FractureTarget): string {
@@ -79,6 +88,12 @@ export function frozenFractureEvent(event: FractureEvent): FractureEvent {
     impulse: event.impulse === null ? null : frozen(event.impulse),
     profile: Object.freeze({ ...event.profile }),
     source: Object.freeze({ ...event.source }),
+    ...(event.npcNormalization === undefined ? {} : { npcNormalization: frozen(event.npcNormalization) }),
+    ...(event.npcPose === undefined ? {} : {
+      npcPose: Object.freeze(Object.fromEntries(
+        Object.entries(event.npcPose).map(([bone, m]) => [bone, frozen(m) as readonly number[]]),
+      )),
+    }),
   });
 }
 

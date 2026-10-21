@@ -50,6 +50,8 @@ export interface FractureChunkInput {
    * 碰撞代理已按该 pivot 表达为 body 局部系，渲染层据此放置 mesh。
    */
   readonly pivot?: FractureVec3;
+  /** 触发时一次性冻结的15-float蒙皮表面；坐标与 pivot 同在当前 actor 模型空间。 */
+  readonly bakedVertices?: Float32Array<ArrayBuffer>;
   /** 碰撞分组（资产 profile 声明；environment=落在地面并与其他块互撞，debris=只与静态环境互撞）。 */
   readonly collisionGroup?: 'environment' | 'debris';
   /** 块级线速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
@@ -102,6 +104,7 @@ export interface ActiveChunk {
   readonly pivot: FractureVec3 | null;
   readonly worldRotation: FractureQuat;
   readonly worldScale: number;
+  readonly bakedVertices?: Float32Array<ArrayBuffer>;
   readonly eventKey: string;
   readonly activationGen: number;
   readonly priority: number;
@@ -253,11 +256,9 @@ function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | nu
   if (!slab(ox, ddx, su.localHalfX)) return null;
   if (!slab(oy, ddy, su.localHalfY)) return null;
   if (!slab(oz, ddz, su.localHalfZ)) return null;
-  // 只接受向上方向（t>0）存在的最高交点；线整体在盒下方时无支撑。
+  // 查询的是完整竖线，不是从世界 y=0 向上的射线；地面可在零高度或地下层。
   const tExit = tF;
-  if (tExit <= 0) return null;
-  const tHit = Math.max(tN, 0);
-  if (tHit > tExit) return null;
+  if (tN > tExit) return null;
   // 完整局部交点 (ox+tExit*ddx, oy+tExit*ddy, oz+tExit*ddz) 旋转回世界系取世界 Y。
   // 三个分量都必须含 tExit*d（倾斜时 ddx≠0，只旋转 (ox, oy+tExit*ddy, oz)
   // 会把世界 Y 低估为 tExit*cos²θ——真实交点旋转回世界后必落在查询竖线 x=qx 上）。
@@ -292,6 +293,10 @@ function supportHeightAt(
     // 本步竖向穿越或触底该面（含穿越与精确落停；容差覆盖高速步过冲）。
     // 多面穿越时选最高面（运动路径上最先接触的面），不穿到更低面。
     if (prevY >= topY - 0.001 && currY <= topY + 0.001) {
+      if (crossed === null || topY > crossed) crossed = topY;
+    } else if (prevCenter >= topY && prevY < topY && currCenter <= prevCenter) {
+      // 当前姿态烘焙后的块可能一开始就与脚下支撑面轻微重叠（尤其小腿/脚）。
+      // 只推出位于质心下方的面；头顶面仍排除，不把初始穿透误当成永远自由落体。
       if (crossed === null || topY > crossed) crossed = topY;
     // 已贴伏在面上（resting 保持）
     } else if (prevY >= topY && prevY - topY <= 0.01) {
@@ -388,6 +393,8 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
 export interface FractureRuntime {
   /** 提交一次性破碎激活。去重/准入校验在物理资源分配前完成。 */
   play(activation: FractureActivation): FracturePlayResult;
+  /** 表现接管失败时撤销该事件的装饰块/排队资源；玩法事实不回滚。 */
+  cancel(eventKey: string): void;
   /** 推进渲染帧：累加真实时间，按固定步长消费有界 tick；渲染频率不反推物理时钟。 */
   tick(frameDtSec: number): void;
   /** 恰推进一个固定 tick（Pause 后 Step 用）。 */
@@ -466,6 +473,7 @@ export function createFractureRuntime(
         linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
         ...(c.ccd === true ? { ccd: true } : {}),
         ...(c.pivot !== undefined ? { pivot: v3(c.pivot) } : {}),
+        ...(c.bakedVertices !== undefined ? { bakedVertices: new Float32Array(c.bakedVertices) } : {}),
         ...(c.collisionGroup !== undefined ? { collisionGroup: c.collisionGroup } : {}),
         ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
         ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
@@ -492,6 +500,7 @@ export function createFractureRuntime(
       const qLen = Math.hypot(c.rotation[0], c.rotation[1], c.rotation[2], c.rotation[3]);
       if (Math.abs(qLen - 1) > 1e-3) return c.chunkId + ' 旋转不是单位四元数（|q|=' + qLen + '）';
       if (v.some((n) => !Number.isFinite(n))) return `${c.chunkId} 变换/速度含非有限分量`;
+      if (c.bakedVertices && (c.bakedVertices.length === 0 || c.bakedVertices.length % 15 !== 0 || !c.bakedVertices.every(Number.isFinite))) return c.chunkId + ' 烘焙顶点非法';
     }
     return null;
   }
@@ -611,6 +620,7 @@ export function createFractureRuntime(
           worldRotation: [c.rotation[0], c.rotation[1], c.rotation[2], c.rotation[3]],
           pivot: c.pivot === undefined ? null : [c.pivot[0], c.pivot[1], c.pivot[2]],
           worldScale: c.scale,
+          ...(c.bakedVertices !== undefined ? { bakedVertices: c.bakedVertices } : {}),
           ageSec: 0, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
           sim, fade: 0, expired: false, supportRadius, lease: null,
         };
@@ -666,6 +676,10 @@ export function createFractureRuntime(
         poolActive: ps.active, poolHighWater: ps.highWater,
         physicsMs, integrateMs, updateMs, ticks,
       };
+    },
+    cancel(eventKey: string): void {
+      for (const c of [...activeChunks]) if (c.eventKey === eventKey) retire(c, 'dispose');
+      for (let i = queue.length - 1; i >= 0; i--) if (queue[i]!.eventKey === eventKey) queue.splice(i, 1);
     },
     play(activation: FractureActivation): FracturePlayResult {
       if (disposed) {

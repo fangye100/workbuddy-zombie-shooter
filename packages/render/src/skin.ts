@@ -20,6 +20,7 @@ import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene
 import { applyBodyIk, type BodyIkState } from './body-ik';
 import { poseTransitionWeight } from './pose-transition';
 import type { PoseLayerState } from './pose-layer';
+import { VERTEX_FLOATS, type MeshData } from '@aether/scene';
 
 /** 一个物体的蒙皮动画播放状态 */
 export interface SkinState {
@@ -377,4 +378,75 @@ export function evalJointMatrices(state: SkinState, out: Float32Array, frame?:Po
   // 恒等关节
   const oId = n * 16;
   for (let j = 0; j < 16; j++) out[oId + j] = IDENT[j]!;
+}
+
+/**
+ * 将原始 mesh 一次性烘成当前可见的模型空间表面（不求值/推进动画）。
+ * normalization 是源 actor 的 T，palette 已是 T·S·T⁻¹，不能再次共轭。
+ * 与 dynamic.wgsl skinPos/skinDir 共用空间合同：四个原权重，点 w=1，
+ * normal/smoothNormal w=0 后归一化；保留矩阵过渡带来的 shear/镜像。
+ * 返回独立的 15-float 缓冲，UV/颜色原样保留，输入不被修改。
+ */
+export function bakeSkinVertices(
+  mesh: MeshData,
+  palette: ArrayLike<number>,
+  normalization: ArrayLike<number>,
+): Float32Array<ArrayBuffer> {
+  const fail = (detail: string): never => { throw new Error('[skin-bake] ' + detail); };
+  const affine = (m: ArrayLike<number>, offset: number): void => {
+    for (let k = 0; k < 16; k++) if (!Number.isFinite(m[offset + k])) fail('矩阵含非有限值');
+    if (Math.abs(m[offset + 3]!) > 1e-5 || Math.abs(m[offset + 7]!) > 1e-5
+      || Math.abs(m[offset + 11]!) > 1e-5 || Math.abs(m[offset + 15]! - 1) > 1e-5) {
+      fail('矩阵不是仿射 4×4');
+    }
+  };
+  if (normalization.length !== 16) fail('normalization 长度必须为 16');
+  affine(normalization, 0);
+  const t = normalization;
+  const det = t[0]! * (t[5]! * t[10]! - t[9]! * t[6]!)
+    - t[4]! * (t[1]! * t[10]! - t[9]! * t[2]!) + t[8]! * (t[1]! * t[6]! - t[5]! * t[2]!);
+  if (!Number.isFinite(det) || det === 0) fail('normalization 不可逆');
+  if (palette.length === 0 || palette.length % 16 !== 0) fail('palette 长度必须为 16 的正整数倍');
+  for (let j = 0; j < palette.length; j += 16) affine(palette, j);
+  const count = mesh.vertices.length / VERTEX_FLOATS;
+  if (!Number.isInteger(count) || count === 0) fail('顶点缓冲必须包含完整的 15-float 顶点');
+  const joints = mesh.joints, weights = mesh.weights;
+  if (!joints || !weights || joints.length !== count * 4 || weights.length !== count * 4) {
+    return fail('缺少完整的四权重 JOINTS/WEIGHTS');
+  }
+  const out = new Float32Array(mesh.vertices);
+  for (let v = 0; v < count; v++) {
+    const base = v * VERTEX_FLOATS, skin = v * 4;
+    let sum = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = weights[skin + k]!;
+      if (!Number.isFinite(w) || w < 0) fail('顶点 ' + v + ' 权重非法');
+      sum += w;
+      if (w > 0 && joints[skin + k]! >= palette.length / 16) fail('顶点 ' + v + ' 关节越界');
+    }
+    if (Math.abs(sum - 1) > 1e-3) fail('顶点 ' + v + ' 权重和不为 1');
+    for (const offset of [0, 3, 6]) {
+      const o = base + offset, point = offset === 0;
+      const x = mesh.vertices[o]!, y = mesh.vertices[o + 1]!, z = mesh.vertices[o + 2]!;
+      const tx = t[0]! * x + t[4]! * y + t[8]! * z + (point ? t[12]! : 0);
+      const ty = t[1]! * x + t[5]! * y + t[9]! * z + (point ? t[13]! : 0);
+      const tz = t[2]! * x + t[6]! * y + t[10]! * z + (point ? t[14]! : 0);
+      let ax = 0, ay = 0, az = 0;
+      for (let k = 0; k < 4; k++) {
+        const w = weights[skin + k]!;
+        if (w <= 0) continue;
+        const j = joints[skin + k]! * 16;
+        ax += w * (palette[j]! * tx + palette[j + 4]! * ty + palette[j + 8]! * tz + (point ? palette[j + 12]! : 0));
+        ay += w * (palette[j + 1]! * tx + palette[j + 5]! * ty + palette[j + 9]! * tz + (point ? palette[j + 13]! : 0));
+        az += w * (palette[j + 2]! * tx + palette[j + 6]! * ty + palette[j + 10]! * tz + (point ? palette[j + 14]! : 0));
+      }
+      const length = point ? 1 : Math.hypot(ax, ay, az);
+      if (length === 0) fail('顶点 ' + v + ' 蒙皮方向退化');
+      out[o] = ax / length; out[o + 1] = ay / length; out[o + 2] = az / length;
+      if (!Number.isFinite(out[o]) || !Number.isFinite(out[o + 1]) || !Number.isFinite(out[o + 2])) {
+        fail('顶点 ' + v + ' 蒙皮结果非有限');
+      }
+    }
+  }
+  return out;
 }

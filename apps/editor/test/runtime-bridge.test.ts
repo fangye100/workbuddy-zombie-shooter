@@ -256,6 +256,7 @@ function stubActorMesh(characterId: string): ActorMesh {
     indices: new Uint32Array(new ArrayBuffer(3 * 4)),
     joints: new Uint16Array(12),
     weights: new Float32Array(12),
+    jointNames: [],
     paletteBase: 7,
     restPose: 42,
     feetOffset: 0.031,

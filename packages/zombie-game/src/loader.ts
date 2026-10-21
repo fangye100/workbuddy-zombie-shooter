@@ -85,6 +85,8 @@ export interface SpawnDesc {
   enabled: boolean;
   /** 沿 parent 链最近的有 RoomVolume 的祖先；自由刷怪点为 null */
   roomNodeId: NodeId | null;
+  /** NPC 致死碎裂配置（WU-07）：该刷怪点产出的 NPC 死亡时走 kind='npc' 的 fracture 资产；null = 普通死亡 */
+  deathFracture: { profile: { path: string; guid: string } } | null;
 }
 
 /**
@@ -446,6 +448,9 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           z: n.world.position[2],
           enabled: s.enabled,
           roomNodeId: findOwningRoom(graph, n.id),
+          deathFracture: s.deathFracture === undefined || s.deathFracture === null
+            ? null
+            : { profile: { path: s.deathFracture.profile.path, guid: s.deathFracture.profile.guid } },
         });
       } else if (c.kind === 'Collider') {
         const col = c as ColliderComponent;

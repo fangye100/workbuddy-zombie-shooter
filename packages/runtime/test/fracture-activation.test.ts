@@ -6,8 +6,10 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createGlbConvexResolver, prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
-import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
-import { ensureRapier, type RapierModule } from '../src/fracture-rapier';
+import { parseGlb, VERTEX_FLOATS, type FractureAsset, type GltfResult } from '@aether/scene';
+import { bakePosePalette, PalettePoseTransitions } from '@aether/render';
+import { ensureRapier, RapierFractureBackend, type RapierModule } from '../src/fracture-rapier';
+import { createFractureRuntime } from '../src/fracture-runtime';
 
 let rapier: RapierModule;
 import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
@@ -26,7 +28,13 @@ const srcMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.g
 // NPC 源模型 sidecar（E-04 在 characters 目录）
 const charMetaGlob = import.meta.glob('../../../assets/characters/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 
-beforeAll(async () => { rapier = await ensureRapier(); }, 30000);
+let e04Source: GltfResult;
+beforeAll(async () => {
+  rapier = await ensureRapier();
+  const io = makeIO();
+  const meta = JSON.parse(await io.readText(e04Profile().source.model.path + '.meta.json'));
+  e04Source = parseGlb(await io.readBinary(e04Profile().source.model.path), meta.importer.normalizeHeightM);
+}, 30000);
 
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
@@ -156,8 +164,51 @@ function ev(profilePath: string, guid: string, opts: Partial<FractureEvent> = {}
     position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
     contact: [0, 2, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
     source: { weaponId: 'w_pistol', hitSequence: seq },
+    ...(opts.target?.kind === 'npc' ? { npcNormalization: IDENTITY16 } : {}),
     ...opts,
   });
+}
+
+/** 读 E-04 profile 原文（测试自身解析，不复用被测实现）。 */
+function e04Profile(): FractureAsset {
+  const key = Object.keys(textGlob).find(k => k.includes('e04-bulwark.fracture.json'))!;
+  return JSON.parse(textGlob[key]!);
+}
+
+/** 按正式 source skeleton 的全部关节取数，不以单块 boneMap 替代 skin。 */
+function e04Pose(fn: (bone: string) => number[]): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  for (const bone of e04Source.skeleton!.jointNames) if (bone) out[bone] = fn(bone);
+  return out;
+}
+
+const IDENTITY16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+/** 独立参照先加权整矩阵，再乘齐次向量；不调用生产 bake helper。 */
+function surfaceOracle(parsed: GltfResult, pose: Readonly<Record<string, readonly number[]>>, normalization: readonly number[]): Float64Array {
+  const { vertices, joints, weights } = parsed.mesh;
+  const names = parsed.skeleton!.jointNames;
+  const transform = (m: readonly number[], p: number[]): number[] => [0, 1, 2, 3].map(
+    row => p.reduce((sum, value, col) => sum + value * m[col * 4 + row]!, 0),
+  );
+  const result = new Float64Array(vertices);
+  for (let v = 0; v < vertices.length / VERTEX_FLOATS; v++) {
+    const matrix = Array<number>(16).fill(0);
+    for (let k = 0; k < 4; k++) {
+      const joint = joints![v * 4 + k]!, weight = weights![v * 4 + k]!;
+      if (weight <= 0) continue;
+      const m = joint === names.length ? IDENTITY16 : pose[names[joint]!]!;
+      for (let j = 0; j < 16; j++) matrix[j] = matrix[j]! + weight * m[j]!;
+    }
+    for (const offset of [0, 3, 6]) {
+      const i = v * VERTEX_FLOATS + offset;
+      const normalized = transform(normalization, [vertices[i]!, vertices[i + 1]!, vertices[i + 2]!, offset === 0 ? 1 : 0]);
+      const xyz = transform(matrix, normalized).slice(0, 3);
+      const length = offset === 0 ? 1 : Math.hypot(...xyz);
+      for (let axis = 0; axis < 3; axis++) result[i + axis] = xyz[axis]! / length;
+    }
+  }
+  return result;
 }
 
 describe('WU-04 生产准入与激活准备（R1）', () => {
@@ -179,11 +230,216 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     // NPC 事件目标带 slot/id/generation：同一次激活的句柄代次必须能区分回收后的新实体。
     const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
       target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 },
+      npcPose: e04Pose(() => [...IDENTITY16]),
     }), { io: makeIO() });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.activation.chunks.filter((c) => c.cls === 'large').length).toBe(3);
     expect(r.activation.chunks.filter((c) => c.cls === 'small').length).toBe(7);
+  }, 30000);
+
+  it('WU-07：NPC 事件缺姿态快照在分配前显式拒绝（不回退 bind/T-pose）', async () => {
+    const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 },
+    }), { io: makeIO() });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.failure.stage).toBe('pose-missing');
+  }, 30000);
+
+  it('WU-07：正式22骨过渡表面与源mesh独立oracle一致，posed bounds驱动真Rapier', async () => {
+    const io = makeIO();
+    const sourceRaw = parseGlb(await io.readBinary(e04Profile().source.model.path), null, 'auto', { normalize: false });
+    const sk = e04Source.skeleton!;
+    expect(sk.joints.length).toBe(22);
+    const normalization = Array.from(sk.normalization);
+    expect(normalization).not.toEqual(IDENTITY16);
+    const palette = bakePosePalette(sk, e04Source.animations, { fps: 8 });
+    const fromPose = palette.clipBasePose[0]! + 1, toPose = palette.clipBasePose[1]! + 2;
+    const transitions = new PalettePoseTransitions();
+    transitions.sample('run-1:42:2', palette, 0, fromPose, 10, 0.5);
+    transitions.sample('run-1:42:2', palette, 1, toPose, 10.1, 0.5);
+    const blend = transitions.sample('run-1:42:2', palette, 1, toPose, 10.3, 0.5);
+    expect(blend.from).not.toBeNull();
+    expect(blend.weight).toBeGreaterThan(0);
+    expect(blend.weight).toBeLessThan(1);
+    const pose: Record<string, number[]> = {};
+    let shearCount = 0;
+    for (let j = 0; j < sk.joints.length; j++) {
+      const mixed = Array.from({ length: 16 }, (_, k) =>
+        blend.from![j * 16 + k]! * (1 - blend.weight) + palette.data[(toPose * palette.jointCount + j) * 16 + k]! * blend.weight);
+      pose[sk.jointNames[j]!] = mixed;
+      const dotXY = mixed[0]! * mixed[4]! + mixed[1]! * mixed[5]! + mixed[2]! * mixed[6]!;
+      if (Math.abs(dotXY) > 1e-5) shearCount++;
+    }
+    expect(shearCount).toBeGreaterThan(0);
+    const sourceSurface = surfaceOracle(sourceRaw, pose, normalization);
+    const key = (vertices: ArrayLike<number>, i: number) => [0, 1, 2].map(k => vertices[i + k]!.toFixed(5)).join(',');
+    const sourceByPosition = new Map<string, number[]>();
+    for (let i = 0; i < sourceRaw.mesh.vertices.length; i += VERTEX_FLOATS) {
+      const k = key(sourceRaw.mesh.vertices, i);
+      sourceByPosition.set(k, [...(sourceByPosition.get(k) ?? []), i]);
+    }
+    const readCounts = new Map<string, number>();
+    const event = ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 },
+      npcPose: pose, npcNormalization: normalization,
+      position: [3, -4, 5], rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2], scale: [1.7, 1.7, 1.7],
+    });
+    const r = await prepareFractureActivation(event, { io: {
+      readText: path => io.readText(path),
+      readBinary: path => { readCounts.set(path, (readCounts.get(path) ?? 0) + 1); return io.readBinary(path); },
+    } });
+    expect(r.ok, !r.ok ? r.failure.detail : '').toBe(true);
+    if (!r.ok) return;
+    const matchedSource = new Set<number>();
+    let maxError = 0, sourceError = 0, mixedWeightVertices = 0;
+    for (const c of r.activation.chunks) {
+      expect(readCounts.get(c.mesh.path)).toBe(1);
+      const raw = parseGlb(await io.readBinary(c.mesh.path), null, 'auto', { normalize: false });
+      expect(raw.skeleton!.jointNames.length).toBe(22);
+      const want = surfaceOracle(raw, pose, normalization), got = c.bakedVertices!;
+      const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+      expect(got.length).toBe(raw.mesh.vertices.length);
+      expect(c.rotation).toEqual(event.rotation);
+      expect(c.scale).toBe(1.7);
+      for (let i = 0; i < got.length; i += VERTEX_FLOATS) {
+        for (let k = 0; k < 9; k++) maxError = Math.max(maxError, Math.abs(got[i + k]! - want[i + k]!));
+        expect(Array.from(got.subarray(i + 9, i + 15))).toEqual(Array.from(raw.mesh.vertices.subarray(i + 9, i + 15)));
+        for (let axis = 0; axis < 3; axis++) {
+          min[axis] = Math.min(min[axis]!, want[i + axis]!);
+          max[axis] = Math.max(max[axis]!, want[i + axis]!);
+        }
+        const v = i / VERTEX_FLOATS;
+        if (Array.from(raw.mesh.weights!.subarray(v * 4, v * 4 + 4)).filter(w => w > 0).length > 1) mixedWeightVertices++;
+        const candidates = sourceByPosition.get(key(raw.mesh.vertices, i)) ?? [];
+        for (const si of candidates) {
+          if ([3, 4, 5].some(k => Math.abs(raw.mesh.vertices[i + k]! - sourceRaw.mesh.vertices[si + k]!) > 2e-5)) continue;
+          matchedSource.add(si);
+          for (let k = 0; k < 6; k++) sourceError = Math.max(sourceError, Math.abs(got[i + k]! - sourceSurface[si + k]!));
+        }
+        // event 为90度yaw：世界 xyz 的闭式结果，无需复用生产四元数函数。
+        const fromBody = [
+          c.position[0] + 1.7 * (got[i + 2]! - c.pivot![2]),
+          c.position[1] + 1.7 * (got[i + 1]! - c.pivot![1]),
+          c.position[2] - 1.7 * (got[i]! - c.pivot![0]),
+        ];
+        const expectedWorld = [3 + 1.7 * want[i + 2]!, -4 + 1.7 * want[i + 1]!, 5 - 1.7 * want[i]!];
+        for (let axis = 0; axis < 3; axis++) maxError = Math.max(maxError, Math.abs(fromBody[axis]! - expectedWorld[axis]!));
+      }
+      const center = min.map((value, k) => (value + max[k]!) / 2);
+      for (let k = 0; k < 3; k++) expect(c.pivot![k]!).toBeCloseTo(center[k]!, 5);
+      expect(c.shape.type).toBe('box');
+      if (c.shape.type === 'box') for (let k = 0; k < 3; k++) expect(c.shape.halfExtents[k]!).toBeCloseTo((max[k]! - min[k]!) / 2, 5);
+      expect(c.position[0]).toBeCloseTo(3 + 1.7 * center[2]!, 5);
+      expect(c.position[1]).toBeCloseTo(-4 + 1.7 * center[1]!, 5);
+      expect(c.position[2]).toBeCloseTo(5 - 1.7 * center[0]!, 5);
+    }
+    expect(mixedWeightVertices).toBeGreaterThan(100);
+    expect(matchedSource.size, '源表面共享顶点覆盖').toBe(sourceRaw.mesh.vertices.length / VERTEX_FLOATS);
+    expect(sourceError).toBeLessThan(3e-5);
+    expect(maxError).toBeLessThan(3e-5);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: 1 / 60, gravity: [0, 0, 0] });
+    const rt = createFractureRuntime(backend);
+    try {
+      const activation = { ...r.activation, chunks: r.activation.chunks.map(c => ({ ...c,
+        linearVelocity: [0, 0, 0] as const, angularVelocity: [0, 0, 0] as const,
+      })) };
+      const original = activation.chunks.map(c => new Float32Array(c.bakedVertices!));
+      expect(rt.play(activation).accepted).toBe(true);
+      // runtime 入队时复制，准备结果/外部后续改动不能污染活动 mesh。
+      for (const c of activation.chunks) c.bakedVertices!.fill(0);
+      rt.stepOnce();
+      expect(rt.stats.rigidActive).toBe(3);
+      expect(rt.stats.simplifiedActive).toBe(7);
+      for (let i = 0; i < activation.chunks.length; i++) {
+        const input = activation.chunks[i]!, active = rt.active.find(c => c.mesh.guid === input.mesh.guid)!;
+        expect(active.bakedVertices).toEqual(original[i]);
+        expect(active.bakedVertices).not.toBe(input.bakedVertices);
+        if (input.cls !== 'large') continue;
+        const body = backend.snapshot(active.handle)!;
+        expect(body).not.toBeNull();
+        for (let k = 0; k < 3; k++) expect(body.position[k]!).toBeCloseTo(input.position[k]!, 5);
+        for (let k = 0; k < 4; k++) expect(body.rotation[k]!).toBeCloseTo(input.rotation[k]!, 5);
+      }
+      for (let k = 0; k < 5; k++) rt.stepOnce();
+      for (const c of activation.chunks) expect(readCounts.get(c.mesh.path)).toBe(1);
+    } finally { rt.dispose(); }
+    expect(backend.ledger.destroyed).toBe(true);
+  }, 30000);
+
+  it.each([
+    ['非均匀尺度', [4, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, -0.25, 1]],
+    ['shear', [1, 0, 0, 0, 0.5, 1, 0, 0, 0, 0, 1, 0, 0.5, -0.25, 1, 1]],
+    ['reflection', [-2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0.5, -0.25, 1, 1]],
+  ])('WU-07：%s 完整烘入顶点而非刚体分解/镜像近似', async (_label, matrix) => {
+    const pose = e04Pose(() => [...matrix]);
+    const io = makeIO();
+    const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 }, npcPose: pose,
+    }), { io });
+    expect(r.ok, !r.ok ? r.failure.detail : '').toBe(true);
+    if (!r.ok) return;
+    for (const c of r.activation.chunks) {
+      const raw = parseGlb(await io.readBinary(c.mesh.path), null, 'auto', { normalize: false });
+      const want = surfaceOracle(raw, pose, IDENTITY16);
+      let error = 0;
+      for (let i = 0; i < want.length; i++) error = Math.max(error, Math.abs(c.bakedVertices![i]! - want[i]!));
+      expect(error).toBeLessThan(3e-5);
+      expect(c.rotation).toEqual([0, 0, 0, 1]);
+      expect(c.scale).toBe(1);
+    }
+  }, 30000);
+
+  it.each(['missing-joint', 'short-matrix', 'nan', 'infinity', 'projective', 'missing-normalization', 'bad-normalization', 'singular-normalization'])
+  ('WU-07：%s 在分配前拒绝', async kind => {
+    const pose = e04Pose(() => [...IDENTITY16]);
+    // 选一个不在 boneMap 中的关节，旧单骨近似会漏过。
+    const bone = Object.keys(pose).find(n => !Object.values(e04Profile().npc!.boneMap).includes(n))!;
+    expect(bone).toBeDefined();
+    let normalization: number[] | undefined = [...IDENTITY16];
+    if (kind === 'missing-joint') delete pose[bone];
+    if (kind === 'short-matrix') pose[bone] = IDENTITY16.slice(0, 15);
+    if (kind === 'nan') pose[bone]![5] = NaN;
+    if (kind === 'infinity') pose[bone]![12] = Infinity;
+    if (kind === 'projective') pose[bone]![3] = 0.25;
+    if (kind === 'missing-normalization') normalization = undefined;
+    if (kind === 'bad-normalization') normalization = IDENTITY16.slice(0, 15);
+    if (kind === 'singular-normalization') normalization![0] = 0;
+    const event = ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 }, npcPose: pose,
+      ...(normalization ? { npcNormalization: normalization } : {}),
+    });
+    const { npcNormalization: _norm, ...withoutNormalization } = event;
+    const r = await prepareFractureActivation(kind === 'missing-normalization' ? withoutNormalization : event, { io: makeIO() });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.failure.stage).toBe(kind === 'missing-joint' || kind === 'missing-normalization' ? 'pose-missing' : 'pose-invalid');
+  }, 30000);
+
+  it.each(['sphere', 'capsule', 'convex'] as const)('WU-07：NPC %s 代理明确拒绝，不静默错用bind形状', async type => {
+    const profile = e04Profile(), c = profile.chunks[0]!;
+    c.proxy.shape = type === 'sphere' ? { type, radius: 0.2 }
+      : type === 'capsule' ? { type, radius: 0.2, halfHeight: 0.3 }
+      : { type, mesh: c.mesh };
+    const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 }, npcPose: e04Pose(() => [...IDENTITY16]),
+    }), { io: makeIO({ [E04]: JSON.stringify(profile) }) });
+    expect(r.ok).toBe(false);
+    if (!r.ok) { expect(r.failure.stage).toBe('proxy-load'); expect(r.failure.detail).toContain(type); }
+  }, 30000);
+
+  it('WU-07：缺失正式skin数据与非单位NPC bind均明确拒绝', async () => {
+    const profile = e04Profile();
+    const event = ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 }, npcPose: e04Pose(() => [...IDENTITY16]),
+    });
+    const io = makeIO({}, { [profile.chunks[0]!.mesh.path]: makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 1])) });
+    const missing = await prepareFractureActivation(event, { io });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.failure.stage).toBe('pose-missing');
+    profile.chunks[0]!.bind.position[0] = 1;
+    const bind = await prepareFractureActivation(event, { io: makeIO({ [E04]: JSON.stringify(profile) }) });
+    expect(bind.ok).toBe(false);
+    if (!bind.ok) expect(bind.failure.stage).toBe('transform');
   }, 30000);
 
   it('目标类型与 profile.kind 不匹配时在分配前拒绝', async () => {

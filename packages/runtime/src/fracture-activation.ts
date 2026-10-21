@@ -17,6 +17,7 @@ import {
   type AssetMeta,
 } from '@aether/scene';
 import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
+import { bakeSkinVertices } from '@aether/render';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 
@@ -30,7 +31,7 @@ export interface FractureAssetIO {
 
 /** 准入/准备失败诊断（不静默；调用方可保留作者草稿/原表现保底）。 */
 export interface FractureAdmissionFailure {
-  readonly stage: 'profile-read' | 'profile-validate' | 'sidecar-read' | 'sidecar-validate'
+  readonly stage: 'profile-read' | 'profile-validate' | 'sidecar-read' | 'sidecar-validate' | 'pose-missing' | 'pose-invalid'
     | 'identity' | 'target-kind' | 'quarantined' | 'ref-read' | 'ref-identity' | 'ref-binary'
     | 'proxy-load' | 'transform';
   readonly detail: string;
@@ -126,6 +127,7 @@ export function createGlbConvexResolver(): ConvexPointsResolver {
 async function checkRefBinary(
   io: FractureAssetIO,
   path: string,
+  currentBinaries?: Map<string, ArrayBuffer>,
 ): Promise<FractureAdmissionFailure | null> {
   // 每次都读当前字节：路径曾经读成功过**不等于**当前资源仍可用/仍是同一版本。
   // （跨调用缓存曾让 Stop 后迟到的旧读取污染新代，并让已失效资源错误准入。）
@@ -146,6 +148,7 @@ async function checkRefBinary(
   if (declared !== buf.byteLength) {
     return { stage: 'ref-binary', detail: 'GLB 声明长度 ' + declared + ' 与实际 ' + buf.byteLength + ' 不一致（' + path + '）' };
   }
+  currentBinaries?.set(path, buf);
   return null;
 }
 
@@ -255,8 +258,10 @@ export async function prepareFractureActivation(
   // 6b) 引用资产的**二进制可用性**：sidecar 合法不代表文件读得到/是 GLB。
   //     逐个核验 conic（source + 每块 mesh），坏文件在分配前拒绝而不是播到一半崩。
   const refs = [profile.source.model.path, ...profile.chunks.map((c) => c.mesh.path)];
+  // 仅本次准备持有原字节，NPC 随后解析同一份 chunk，不跨事件缓存/重读。
+  const currentBinaries = wantNpc ? new Map<string, ArrayBuffer>() : undefined;
   for (const path of refs) {
-    const bf = await checkRefBinary(opts.io, path);
+    const bf = await checkRefBinary(opts.io, path, currentBinaries);
     if (bf) return { ok: false, failure: bf };
   }
 
@@ -276,8 +281,11 @@ export async function prepareFractureActivation(
 
   // 7) R6：事件世界尺度必须均匀（非均匀组合不平均近似，明确拒绝）。
   const ws = event.scale;
-  if (!isUniformScale(ws)) {
+  if (!event.position.every(Number.isFinite) || !ws.every((v) => Number.isFinite(v) && v > 0) || !isUniformScale(ws)) {
     return { ok: false, failure: { stage: 'transform', detail: '事件世界尺度非均匀（' + ws.join(',') + '），不支持近似，请改用均匀尺度' } };
+  }
+  if (wantNpc && (!event.npcPose || !event.npcNormalization)) {
+    return { ok: false, failure: { stage: 'pose-missing', detail: 'NPC 事件缺少完整 npcPose 或源 actor 的 npcNormalization' } };
   }
   const rng = makeRng(event.seed);
   const chunks: FractureChunkInput[] = [];
@@ -299,32 +307,95 @@ export async function prepareFractureActivation(
     if (!isUniformScale(bs)) {
       return { ok: false, failure: { stage: 'transform', detail: '碎块 ' + c.chunkId + ' bind.scale 非均匀（' + bs.join(',') + '），不支持近似，请改用均匀尺度' } };
     }
-    // R6 唯一变换链（标准 bind TRS 公式，assemblyScale 已含在事件世界变换，不二次乘）：
-    // bind 局部：质心 = bindT + bindR * (bindS * pivot)
-    // 世界：质心 = eventT + eventR * (bindT + bindR * (bindS * pivot)) * eventS
-    const pivotScaled: FractureVec3 = [
-      c.bind.scale[0] * c.pivot[0],
-      c.bind.scale[1] * c.pivot[1],
-      c.bind.scale[2] * c.pivot[2],
-    ];
-    const bindLocal = rotateByQuat(pivotScaled, c.bind.rotation);
-    const bindPos: FractureVec3 = [
-      c.bind.position[0] + bindLocal[0],
-      c.bind.position[1] + bindLocal[1],
-      c.bind.position[2] + bindLocal[2],
-    ];
-    const worldOffset = rotateByQuat(bindPos, event.rotation);
+    let bakedVertices: Float32Array<ArrayBuffer> | undefined;
+    let posedHalfExtents: FractureVec3 | undefined;
+    let pivot: FractureVec3 = [c.pivot[0], c.pivot[1], c.pivot[2]];
+    let modelCenter: FractureVec3;
+    let worldRot: FractureQuat;
+    let worldScale: number;
+    if (wantNpc) {
+      // 当前 LBS 会改变代理的形状；只明确支持 posed AABB box，不拿 bind 代理冒充。
+      if (c.proxy.shape.type !== 'box') {
+        return { ok: false, failure: { stage: 'proxy-load', detail: 'NPC 碎块 ' + c.chunkId + ' 当前姿态烘焙仅支持 box 代理，不支持 ' + c.proxy.shape.type } };
+      }
+      // 正式 skin chunk 已与源 mesh 同空间；非单位 bind 不能被忽略或重复叠加。
+      if (c.bind.position.some((v) => Math.abs(v) > 1e-6) || bs.some((v) => Math.abs(v - 1) > 1e-6)
+        || br.slice(0, 3).some((v) => Math.abs(v) > 1e-6) || Math.abs(Math.abs(br[3]) - 1) > 1e-6) {
+        return { ok: false, failure: { stage: 'transform', detail: 'NPC 碎块 ' + c.chunkId + ' 的 skin 已在源模型空间，仅支持单位 bind' } };
+      }
+      let parsed: ReturnType<typeof parseGlb>;
+      try {
+        parsed = parseGlb(currentBinaries!.get(c.mesh.path)!, null, 'auto', { normalize: false });
+      } catch (e) {
+        return { ok: false, failure: { stage: 'ref-binary', detail: 'NPC 碎块 ' + c.chunkId + ' GLB 解析失败：' + String(e) } };
+      }
+      const sk = parsed.skeleton;
+      if (!sk || sk.jointNames.length !== sk.joints.length || !parsed.mesh.joints || !parsed.mesh.weights) {
+        return { ok: false, failure: { stage: 'pose-missing', detail: 'NPC 碎块 ' + c.chunkId + ' 缺少完整 skeleton/JOINTS/WEIGHTS' } };
+      }
+      const palette = new Float32Array((sk.joints.length + 1) * 16);
+      for (let j = 0; j < sk.joints.length; j++) {
+        const name = sk.jointNames[j];
+        const matrix = name ? event.npcPose![name] : undefined;
+        if (!matrix) {
+          return { ok: false, failure: { stage: 'pose-missing', detail: 'NPC 碎块 ' + c.chunkId + ' npcPose 缺少关节 ' + String(name) } };
+        }
+        if (matrix.length !== 16) {
+          return { ok: false, failure: { stage: 'pose-invalid', detail: 'NPC 关节 ' + name + ' 矩阵长度 ' + matrix.length + ' 不为 16' } };
+        }
+        palette.set(matrix, j * 16);
+      }
+      // parseGlb 为未蒙皮 primitive 使用末尾恒等关节，与正常渲染一致。
+      for (let k = 0; k < 16; k++) palette[sk.joints.length * 16 + k] = k % 5 === 0 ? 1 : 0;
+      try {
+        bakedVertices = bakeSkinVertices(parsed.mesh, palette, event.npcNormalization!);
+      } catch (e) {
+        return { ok: false, failure: { stage: 'pose-invalid', detail: 'NPC 碎块 ' + c.chunkId + ' 蒙皮烘焙失败：' + String(e) } };
+      }
+      const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+      for (let v = 0; v < bakedVertices.length; v += VERTEX_FLOATS) {
+        for (let axis = 0; axis < 3; axis++) {
+          min[axis] = Math.min(min[axis]!, bakedVertices[v + axis]!);
+          max[axis] = Math.max(max[axis]!, bakedVertices[v + axis]!);
+        }
+      }
+      pivot = [(min[0]! + max[0]!) / 2, (min[1]! + max[1]!) / 2, (min[2]! + max[2]!) / 2];
+      posedHalfExtents = [(max[0]! - min[0]!) / 2, (max[1]! - min[1]!) / 2, (max[2]! - min[2]!) / 2];
+      if (!posedHalfExtents.every((v) => Number.isFinite(v) && v > 0)) {
+        return { ok: false, failure: { stage: 'pose-invalid', detail: 'NPC 碎块 ' + c.chunkId + ' posed bounds 退化，不能生成 box 代理' } };
+      }
+      modelCenter = pivot;
+      worldRot = event.rotation;
+      worldScale = ws[0];
+    } else {
+      // WU06 物体唯一变换链（assemblyScale 已含在事件世界变换，不二次乘）：
+      // bind 局部：质心 = bindT + bindR * (bindS * pivot)
+      // 世界：质心 = eventT + eventR * (bindT + bindR * (bindS * pivot)) * eventS
+      const pivotScaled: FractureVec3 = [
+        c.bind.scale[0] * c.pivot[0],
+        c.bind.scale[1] * c.pivot[1],
+        c.bind.scale[2] * c.pivot[2],
+      ];
+      const bindLocal = rotateByQuat(pivotScaled, c.bind.rotation);
+      const bindModel: FractureVec3 = [
+        c.bind.position[0] + bindLocal[0],
+        c.bind.position[1] + bindLocal[1],
+        c.bind.position[2] + bindLocal[2],
+      ];
+      modelCenter = bindModel;
+      worldRot = quatMul(event.rotation, c.bind.rotation);
+      worldScale = c.bind.scale[0] * ws[0];
+    }
+    const worldOffset = rotateByQuat(modelCenter, event.rotation);
     const worldPos: FractureVec3 = [
       event.position[0] + worldOffset[0] * ws[0],
       event.position[1] + worldOffset[1] * ws[1],
       event.position[2] + worldOffset[2] * ws[2],
     ];
-    const worldRot = quatMul(event.rotation, c.bind.rotation);
-    // bind.scale 已在上文拒绝非均匀；此处直接用 bind.scale[0]（均匀值）× 事件均匀尺度。
-    const worldScale = c.bind.scale[0] * ws[0];
-
     let shape: FractureChunkInput['shape'];
-    if (c.proxy.shape.type === 'convex') {
+    if (posedHalfExtents) {
+      shape = { type: 'box', halfExtents: posedHalfExtents };
+    } else if (c.proxy.shape.type === 'convex') {
       if (!opts.resolveConvexPoints) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' 需离线 convex 代理但未提供 resolveConvexPoints' } };
       }
@@ -447,7 +518,8 @@ export async function prepareFractureActivation(
       mass: c.proxy.mass,
       friction: c.proxy.friction,
       restitution: c.proxy.restitution,
-      pivot: [c.pivot[0], c.pivot[1], c.pivot[2]],
+      pivot,
+      ...(bakedVertices ? { bakedVertices } : {}),
       collisionGroup: c.proxy.collisionGroup,
       linearVelocity: lv,
       angularVelocity: av,

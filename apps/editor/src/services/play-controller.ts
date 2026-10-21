@@ -27,7 +27,7 @@ import { PlaySession, type PlayState } from '@aether/zombie-game';
 import type { BehaviorExecutor } from '@aether/runtime';
 import { SceneGraph } from '@aether/scene';
 import {
-  attachFixedTick, bindFractureToPlay, createGlbConvexResolver, prepareFractureActivation,
+  attachFixedTick, bindFractureToPlay, createGlbConvexResolver, frozenFractureEvent, fractureEventKey, prepareFractureActivation,
   type FractureAssetIO, type FractureEvent, type FracturePlayBinding, type FracturePlayResult,
 } from '@aether/runtime';
 import { createEditorFractureIO } from './fracture-io';
@@ -95,6 +95,13 @@ export class PlayController {
   private brokenMirrorsDirty = false;
   private readyRetryBinding: FracturePlayBinding | null = null;
   private pendingDestructibleEvents: FractureEvent[] = [];
+  /** WU-07：combatEvents 的死亡碎裂消费游标（reset/stop 后缓冲变短自动归零） */
+  private deathFractureCursor = 0;
+  private readonly deathTakeovers = new Map<string, { identity: {runId:number;id:number;generation:number}; label:string; count:number; binding:FracturePlayBinding; request:number }>();
+  private deathRequest = 0;
+  private deathDiagnosticRequest = 0;
+  /** WU-07：武器事实未带 vfx 序号时的死亡碎裂事件序号兜底 */
+  private deathFractureSeq = 0;
   private lastDestructibleError: string | null = null;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
@@ -194,6 +201,8 @@ export class PlayController {
     // 否则新 binding 不登记、Stop 时无人释放，账目 pending=0 是假账。
     this.fractureBinding = null;
     this.fractureRegistered = false;
+    this.deathFractureCursor = 0;
+    this.deathTakeovers.clear();
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
     for (const node of doc.nodes) {
@@ -385,6 +394,130 @@ export class PlayController {
     if (this.brokenMirrorsDirty) this.syncBrokenMirrors();
   }
 
+  /**
+   * WU-07：消费 NPC 致死事实 → 冻结最后可见姿态 → 正式 spawnFracture。
+   * 必须在 advance/stepOnce 之后、bridge.refresh 之前调用：bridge 的
+   * lastPoses 仍是击杀前最后一帧的呈现行（活体姿态，而非死亡尾部 phase0）。
+   * 死亡判定/奖励由会话在 applyDamage 内一次性完成——这里只做表现决策；
+   * 任何失败（资产/姿态/后端）保留原死亡尾部，不回滚玩法事实。
+   */
+  private consumeDeathFractures(): void {
+    const rt = this.session.runtime;
+    if (rt === null) return;
+    const events = rt.combatEvents;
+    if (events.length < this.deathFractureCursor) this.deathFractureCursor = 0;
+    for (; this.deathFractureCursor < events.length; this.deathFractureCursor++) {
+      const ev = events[this.deathFractureCursor]!;
+      if (ev.type !== 'kill' || ev.defeated === undefined || ev.defeated.kind !== 'npc') continue;
+      const defeated = ev.defeated;
+      // 身份三代同检（W07-03）：快照必须属于被杀的同一 run/slot/generation。
+      if (defeated.runId !== ev.runId || defeated.id !== ev.slot || defeated.generation !== ev.generation) continue;
+      const profile = rt.desc.spawns.find(s => s.nodeId === defeated.sourceNodeId)?.deathFracture?.profile ?? null;
+      if (profile === null) continue; // 未配置致碎 → 原死亡表现，无需任何处理
+      const binding = this.fractureBinding;
+      const identity = { runId: ev.runId, id: ev.slot, generation: ev.generation };
+      const label = defeated.characterId + '#' + ev.slot + '@' + ev.runId + ':' + ev.generation;
+      const request = ++this.deathRequest;
+      void this.playDeathFracture(profile, defeated, ev, identity, label, binding, request).catch(error => ({accepted:false,rejection:{reason:'prepare-failed',detail:String(error)}})).then((r) => {
+        // 旧代迟到结果不写新会话（与 WU-06 spawnFracture 消费者同一守卫模式）。
+        if (this.fractureBinding !== binding) return;
+        if (!r.accepted && r.rejection !== null && r.rejection.reason !== 'session-closed' && request >= this.deathDiagnosticRequest) {
+          this.deathDiagnosticRequest = request;
+          this.lastDestructibleError = label + '：死亡碎裂 ' + r.rejection.reason + ' — ' + r.rejection.detail + '（保留原死亡表现）';
+          console.warn('[fracture] ' + this.lastDestructibleError);
+        }
+      });
+    }
+  }
+
+  /** 每次读取当前 profile；坏资源恢复/同路径外改不信任旧路径缓存。 */
+  private async deathProfileInfo(path: string): Promise<{ actorId: string; boneMap: Record<string, string>; count:number } | null> {
+    try {
+      const raw = JSON.parse(await this.fractureIO.readText(path)) as { chunks?:unknown[]; npc?: { actorId?: string; boneMap?: Record<string, string> } | null };
+      const info = raw.npc !== null && raw.npc !== undefined && typeof raw.npc.actorId === 'string' && raw.npc.boneMap !== null && typeof raw.npc.boneMap === 'object' && !Array.isArray(raw.npc.boneMap) && Object.values(raw.npc.boneMap).every(v=>typeof v==='string')
+        ? { actorId: raw.npc.actorId, boneMap: raw.npc.boneMap, count:raw.chunks?.length??0 }
+        : null;
+      return info;
+    } catch {
+      return null;
+    }
+  }
+
+  private async playDeathFracture(
+    profile: { path: string; guid: string },
+    defeated: { characterId: string; x: number; y?: number; z: number; yaw: number },
+    ev: { weaponId?: string; weaponEvent?: number; damageKind?: 'burn'; tick: number; impact?: {readonly origin:readonly [number,number,number];readonly contact:readonly [number,number,number]} },
+    identity: { runId: number; id: number; generation: number },
+    label: string,
+    binding: FracturePlayBinding | null,
+    request: number,
+  ): Promise<{ accepted: boolean; rejection: { reason: string; detail: string } | null }> {
+    const snapshot = this.bridge.deathPoseSnapshot(identity);
+    if (snapshot === null) {
+      return { accepted: false, rejection: { reason: 'pose-unavailable', detail: '死亡姿态快照不可用（模型未装配或从未呈现）' } };
+    }
+    const info = await this.deathProfileInfo(profile.path);
+    // 读取期间可能 Reset/Stop/换场景：旧代事实不得进入新代 runtime（W07-09）。
+    if (this.fractureBinding !== binding) {
+      return { accepted: false, rejection: { reason: 'session-closed', detail: '死亡碎裂准备期间会话已换代，本次激活作废' } };
+    }
+    if (info === null) {
+      return { accepted: false, rejection: { reason: 'profile-read', detail: '死亡碎裂 profile 缺少 npc 对齐块或不可读：' + profile.path } };
+    }
+    if (info.actorId !== defeated.characterId || snapshot.characterId !== defeated.characterId) {
+      return { accepted: false, rejection: { reason: 'actor-mismatch', detail: 'profile actorId=' + info.actorId + ' 与被杀角色 ' + defeated.characterId + ' 不一致' } };
+    }
+    // boneMap 目标骨骼 → 快照关节矩阵（列主 16 floats，含过渡混合）。
+    const npcPose: Record<string, number[]> = {};
+    for (const bone of new Set([...Object.values(info.boneMap), ...snapshot.jointNames.filter((n): n is string => n !== null)])) {
+      const joint = snapshot.jointNames.indexOf(bone);
+      if (joint < 0 || joint >= snapshot.jointCount) {
+        return { accepted: false, rejection: { reason: 'pose-missing', detail: '骨架缺少映射骨骼 ' + bone } };
+      }
+      npcPose[bone] = Array.from(snapshot.matrices.subarray(joint * 16, joint * 16 + 16));
+    }
+    // 世界 TRS：实例原点 = 脚底 + feetOffset（与 bridge 打包的实例行同一公式）。
+    const yaw = snapshot.yaw;
+    const position: [number, number, number] = [...snapshot.position];
+    const half = yaw / 2;
+    const rotation: [number, number, number, number] = [0, Math.sin(half), 0, Math.cos(half)];
+    const contact: [number, number, number] | null = ev.impact ? [...ev.impact.contact] : null;
+    const d = ev.impact ? ev.impact.contact.map((v,i)=>v-ev.impact!.origin[i]!) : null;
+    const length = d ? Math.hypot(...d) : 0;
+    const normal: [number,number,number] | null = d && length>1e-6 ? [d[0]!/length,d[1]!/length,d[2]!/length] : null;
+    const impulse: [number, number, number] | null = normal ? [normal[0]*2,normal[1]*2,normal[2]*2] : null;
+    let h = 2166136261; const sid = identity.runId + ':' + identity.id + ':' + identity.generation + ':' + ev.tick;
+    for (let i = 0; i < sid.length; i++) h = Math.imul(h ^ sid.charCodeAt(i), 16777619);
+    const event = frozenFractureEvent({
+      sequence: identity.generation * 1000003 + identity.id,
+      tick: ev.tick, seed: (h >>> 0) || 1,
+      profile: { path: profile.path, guid: profile.guid },
+      target: { kind: 'npc', runId: String(identity.runId), slot: identity.id, id: identity.id, generation: identity.generation },
+      position, rotation, scale: [1, 1, 1],
+      contact, normal, impulse,
+      source: {
+        weaponId: ev.weaponId ?? 'unknown',
+        hitSequence: ev.weaponEvent ?? ++this.deathFractureSeq,
+        ...(ev.damageKind !== undefined ? { damageKind: ev.damageKind } : {}),
+      },
+      npcPose,
+      npcNormalization: Array.from(snapshot.normalization),
+    });
+    const r = await this.spawnFracture(event);
+    if (r.accepted && binding && this.fractureBinding === binding) {
+      // accepted 仅代表入队；完整物理块、纹理与正式GPU资源可接管后才隐藏原death。
+      this.deathTakeovers.set(fractureEventKey(event), {identity,label,count:info.count,binding,request});
+    }
+    return r.accepted
+      ? { accepted: true, rejection: null }
+      : {
+          accepted: false,
+          rejection: r.rejection === null
+            ? { reason: 'fracture-rejected', detail: '未知拒绝（无诊断体）' }
+            : { reason: r.rejection.reason, detail: r.rejection.detail },
+        };
+  }
+
   /** 用去掉 broken 节点的运行图同步物理镜像；后端未就绪时保持 dirty 供重试。 */
   private syncBrokenMirrors(): boolean {
     const binding = this.fractureBinding;
@@ -416,6 +549,8 @@ export class PlayController {
     this.brokenMirrorsDirty = false;
     this.readyRetryBinding = null;
     this.pendingDestructibleEvents = [];
+    this.deathFractureCursor = 0;
+    this.deathTakeovers.clear();
     this.lastDestructibleError = null;
   }
 
@@ -427,7 +562,32 @@ export class PlayController {
       this.fractureRenderer?.sync(null, null);
       return;
     }
+    // 终态只消费已经成立的表现事实，不推进物理时钟；不能让最后一个击杀永远停在队列。
+    if (this.deathTakeovers.size > 0 && this.session.outcome !== 'running') binding.runtime.tick(0);
     this.fractureRenderer?.sync(binding.runtime, binding.backend());
+    for (const [key, takeover] of this.deathTakeovers) {
+      if (takeover.binding !== binding) { this.deathTakeovers.delete(key); continue; }
+      const active = binding.runtime.active.filter(c => c.eventKey === key);
+      if (binding.runtime.stats.queuedEvents > 0 && active.length === 0) continue;
+      const batches = this.fractureRenderer?.dynamicBatches.filter(b => active.some(c => b.vertices === c.bakedVertices)) ?? [];
+      let failure = active.length !== takeover.count ? '物理接管失败或容量不足' : this.fractureRenderer?.error ?? null;
+      if (failure === null && batches.length === 0) continue; // 原纹理/网格仍在异步装配
+      if (failure === null && new Set(batches.map(b => b.meshId)).size !== takeover.count) continue;
+      if (failure === null && !this.renderer.core.prepareDynamicBatches([...(this.bridge.batches()??[]),...(this.fractureRenderer?.dynamicBatches??[])])) failure = this.renderer.core.dynamicError ?? 'GPU接管失败';
+      if (failure !== null) {
+        binding.runtime.cancel(key);
+        if (takeover.request >= this.deathDiagnosticRequest) {
+          this.deathDiagnosticRequest = takeover.request;
+          this.lastDestructibleError = takeover.label + '：死亡碎裂 ' + failure + '（保留原死亡表现）';
+        }
+        this.fractureRenderer?.sync(binding.runtime, binding.backend());
+      } else {
+        this.bridge.suppressDeath(takeover.identity);
+        if (this.lastDestructibleError?.startsWith(takeover.label + '：')) this.lastDestructibleError = null;
+        this.bridge.refresh();
+      }
+      this.deathTakeovers.delete(key);
+    }
   }
 
   /** 碎片绑定只读视图（调试/验收观察；Stop 后为 null）。 */
@@ -533,6 +693,7 @@ export class PlayController {
   step(): void {
     this.session.stepOnce();
     this.consumeDestructibleEvents();
+    this.consumeDeathFractures();
     // 只在暂停态实际推进时驱动碎片（非暂停下 stepOnce 为空操作，不重复 tick）。
     if (this.session.state === 'paused' && this.session.outcome === 'running') {
       this.syncGateMirrors();
@@ -596,6 +757,8 @@ export class PlayController {
     this.readyRetryBinding = null;
     this.pendingDestructibleEvents = [];
     this.lastDestructibleError = null;
+    this.deathFractureCursor = 0;
+    this.deathTakeovers.clear();
     // 先还原相机，再断会话：反过来做的话，恢复期间画面还挂着游戏机位，
     // 会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
     this.playCamera?.detach();
@@ -611,6 +774,7 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     this.consumeDestructibleEvents();
+    this.consumeDeathFractures();
     if (n > 0) {
       // R3：真实固定步驱动碎片物理（渲染频率不反推物理时钟）。
       // 终态（game-over / floor-clear）时 PlaySession 仍可能返回步数，但世界已冻结：
@@ -629,6 +793,7 @@ export class PlayController {
       this.syncPlayCamera();
       this.syncFractureBatches();
     }
+    if (n === 0 && this.deathTakeovers.size > 0) this.syncFractureBatches();
     if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
     this.vfx.update(this.session);
     // 暂停只重建同一相位的装配请求；异步资产就绪与持握草稿预览不推进模拟/动画时钟。

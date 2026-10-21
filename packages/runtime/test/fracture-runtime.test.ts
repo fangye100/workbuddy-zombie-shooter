@@ -50,6 +50,23 @@ function act(nodeId: string, chunks: FractureChunkInput[], opts: Partial<Fractur
 }
 
 describe('WU-04 两层播放与真实物理组合', () => {
+  it.each([0,-2])('简化块实际接触零高度/地下层地板（top=%s），不因世界坐标原点漏检',top=>{
+    const {backend,rt}=makeRuntime();backend.removeStatic('ground');
+    backend.upsertStatic('floor',{position:[0,top-.15,0],rotation:[0,0,0,1],shape:{type:'box',halfExtents:[10,.15,10]}});
+    expect(rt.play(act('zero-ground',[{...chunk('foot','small'),position:[0,top+.2,0],linearVelocity:[0,0,0]}])).accepted).toBe(true);
+    rt.stepOnce();for(let i=0;i<180;i++)rt.stepOnce();
+    expect(rt.active[0]!.sim!.position[1]).toBeGreaterThan(top+.1);expect(rt.active[0]!.sim!.position[1]).toBeLessThan(top+.4);rt.dispose();
+  });
+  it('当前姿态 small 块初始与脚下地面重叠时推出接触，不穿地且不跳到头顶面',()=>{
+    const {backend,rt}=makeRuntime();
+    backend.upsertStatic('ceiling',{position:[0,3,0],rotation:[0,0,0,1],shape:{type:'box',halfExtents:[10,.1,10]}});
+    const c={...chunk('posed-foot','small'),position:[0,.55,0] as const,linearVelocity:[0,-.1,0] as const};
+    expect(rt.play(act('posed-npc',[c])).accepted).toBe(true);rt.stepOnce();
+    const state=rt.active[0]!.sim!;
+    expect(state.position[1]).toBeGreaterThan(.6);expect(state.position[1]).toBeLessThan(1);
+    for(let i=0;i<120;i++)rt.stepOnce();expect(state.position[1]).toBeGreaterThan(.6);
+    rt.dispose();
+  });
   it('large 块创建真实 Rapier body 且随 step 运动；small 块走简化积分且仍是三维运动状态', () => {
     const { backend, rt } = makeRuntime();
     const r = rt.play(act('n1', [chunk('c1', 'large'), chunk('c2', 'small', 1)]));

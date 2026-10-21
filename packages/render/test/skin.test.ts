@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   advance,
+  bakeSkinVertices,
   createSkinState,
   evalJointMatrices,
   seek,
@@ -210,5 +211,67 @@ describe('packSkin · 顶点缓冲交织', () => {
         expect(wv[6 * i + 2 + k]).toBe(k === 0 ? 1 : 0);
       }
     }
+  });
+});
+
+
+describe('bakeSkinVertices · 当前表面CPU数学', () => {
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  function mesh() {
+    return {
+      vertices: new Float32Array([1, 2, 3, 1, 2, 0, 0, 1, 2, 0.25, 0.75, 1, 0.6, 0.2, 1]),
+      indices: new Uint32Array([0]),
+      joints: new Uint16Array([0, 1, 2, 3]),
+      weights: new Float32Array([0.1, 0.2, 0.3, 0.4]),
+    };
+  }
+  it('四权重已知闭式参照：非零T、shear、reflection及两种法线，不改输入', () => {
+    // T = 平移(10,-4,3) + 2倍缩放 + Z轴90度旋转。
+    // Tp=(6,-2,9), Tn=(-4,2,0), Ts=(-2,0,4)。
+    const t = [0, 2, 0, 0, -2, 0, 0, 0, 0, 0, 2, 0, 10, -4, 3, 1];
+    const translation = [...identity]; translation[12] = 4; translation[13] = -2; translation[14] = 1;
+    const shear = [...identity]; shear[4] = 1;
+    const reflection = [...identity]; reflection[0] = -1; reflection[5] = 2; reflection[12] = -1; reflection[14] = 2;
+    const palette = new Float32Array([...identity, ...translation, ...shear, ...reflection]);
+    const input = mesh(), before = new Float32Array(input.vertices), paletteBefore = new Float32Array(palette);
+    const got = bakeSkinVertices(input, palette, t);
+    // 四个变换点分别为(6,-2,9)/(10,-4,10)/(4,-2,9)/(-7,-4,11)。
+    const expected = [1, -3.2, 10, -1 / Math.sqrt(197), 14 / Math.sqrt(197), 0,
+      -1 / Math.sqrt(101), 0, 10 / Math.sqrt(101)];
+    expected.forEach((value, i) => expect(got[i]!).toBeCloseTo(value, 6));
+    expect(got.subarray(9)).toEqual(before.subarray(9));
+    expect(input.vertices).toEqual(before);
+    expect(palette).toEqual(paletteBefore);
+    expect(got.buffer).not.toBe(input.vertices.buffer);
+    input.vertices.fill(0); palette.fill(0);
+    expected.forEach((value, i) => expect(got[i]!).toBeCloseTo(value, 6));
+  });
+
+  it('零权重关节不读取，恒等关节仍使用规范化后顶点', () => {
+    const input = mesh();
+    input.joints.set([0, 65535, 65535, 65535]); input.weights.set([1, 0, 0, 0]);
+    const got = bakeSkinVertices(input, identity, identity);
+    expect(got.subarray(0, 3)).toEqual(input.vertices.subarray(0, 3));
+    expect(got[3]!).toBeCloseTo(1 / Math.sqrt(5), 6);
+    expect(got[4]!).toBeCloseTo(2 / Math.sqrt(5), 6);
+  });
+
+  it.each(['weights-missing', 'weights-negative', 'weights-nan', 'weights-zero', 'joint-range', 'matrix-short', 'matrix-nan', 'matrix-projective', 'matrix-zero', 'direction-zero', 'normalization-singular'])
+  ('非法输入 %s 显式拒绝，不返回错误表面', kind => {
+    const input = mesh(), matrix = [...identity];
+    input.joints.fill(0); input.weights.set([1, 0, 0, 0]);
+    const normalization = [...identity];
+    if (kind === 'weights-missing') input.weights = new Float32Array(0);
+    if (kind === 'weights-negative') input.weights[0] = -1;
+    if (kind === 'weights-nan') input.weights[0] = NaN;
+    if (kind === 'weights-zero') input.weights.fill(0);
+    if (kind === 'joint-range') input.joints[0] = 1;
+    if (kind === 'matrix-short') matrix.pop();
+    if (kind === 'matrix-nan') matrix[0] = NaN;
+    if (kind === 'matrix-projective') matrix[3] = 0.1;
+    if (kind === 'matrix-zero') matrix.fill(0);
+    if (kind === 'direction-zero') input.vertices.fill(0, 3, 6);
+    if (kind === 'normalization-singular') normalization[0] = 0;
+    expect(() => bakeSkinVertices(input, matrix, normalization)).toThrow('[skin-bake]');
   });
 });

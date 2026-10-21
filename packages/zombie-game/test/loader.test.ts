@@ -504,3 +504,20 @@ describe('loadLevelRuntime —— W06 可破坏庭院', () => {
     expect(disabled.desc!.obstacles.some((o) => o.nodeId === 'nd_fr_barrel')).toBe(true);
   });
 });
+
+describe('loadLevelRuntime —— WU-07 NPC 致死碎裂配置', () => {
+  const W7 = import.meta.glob('../../../assets/scenes/sandbox/fracture-wu07.scene.json', { eager: true });
+
+  it('deathFracture 按 SpawnPoint 装载：配置者带 profile 引用，未配置对照为 null', () => {
+    const key = Object.keys(W7)[0]!;
+    const doc = (W7[key] as { default: unknown }).default as SceneDocument;
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
+    const e04 = r.desc!.spawns.find(s => s.nodeId === 'nd_w7_spawn_e04')!;
+    expect(e04.deathFracture).toEqual({
+      profile: { path: 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json', guid: 'as_e04frct' },
+    });
+    const e01 = r.desc!.spawns.find(s => s.nodeId === 'nd_w7_spawn_e01')!;
+    expect(e01.deathFracture).toBeNull();
+  });
+});

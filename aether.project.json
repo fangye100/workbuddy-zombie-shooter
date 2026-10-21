@@ -267,6 +267,12 @@
       "path": "assets/scenes/sandbox/fracture-wu06.scene.json",
       "name": "可破坏庭院 WU-06 · 真实武器/爆炸/导航闭环",
       "enabled": true
+    },
+    {
+      "id": "sc_fracture_wu07",
+      "path": "assets/scenes/sandbox/fracture-wu07.scene.json",
+      "name": "致死碎裂 WU-07 · NPC 当前姿态/真实kill/死亡保底",
+      "enabled": true
     }
   ],
   "startIndex": 1,
