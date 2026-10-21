@@ -1,0 +1,639 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu06.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu06.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "window": {
+      "left": 1920,
+      "top": 80,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "initial": {
+      "snapshot": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "collision": {
+        "solids": [
+          "nd_fr_ground",
+          "nd_w6_control",
+          "nd_w6_wall_l",
+          "nd_w6_wall_r",
+          "nd_fr_barrel",
+          "nd_w6_barrel_b",
+          "nd_w6_barrel_c"
+        ],
+        "dynamicObstacles": [
+          "nd_fr_barrel",
+          "nd_w6_barrel_b",
+          "nd_w6_barrel_c"
+        ]
+      },
+      "player": {
+        "x": 0,
+        "z": 1.7999999523162842
+      },
+      "weapons": [
+        "pistol",
+        "shotgun",
+        "smg",
+        "sniper",
+        "chainsaw",
+        "flame",
+        "launcher"
+      ],
+      "npc": [
+        {
+          "x": -0.33500221371650696,
+          "z": -3.487971305847168,
+          "id": 1,
+          "generation": 1
+        }
+      ],
+      "batches": 0,
+      "error": null
+    },
+    "npcSpawn": {
+      "x": -0.33500221371650696,
+      "z": -3.487971305847168
+    },
+    "blockedNpc": {
+      "x": -0.18484283983707428,
+      "z": -1.117722988128662,
+      "unreachable": 1
+    },
+    "fragmentRows": [
+      {
+        "count": 1,
+        "p": [
+          0.03225322812795639,
+          0.06756670773029327,
+          0.10394936054944992
+        ]
+      },
+      {
+        "count": 1,
+        "p": [
+          0.03225322812795639,
+          0.06756670773029327,
+          0.10394936054944992
+        ]
+      }
+    ],
+    "mirror": [
+      "scene-mirror:nd_fr_ground",
+      "scene-mirror:nd_w6_barrel_b",
+      "scene-mirror:nd_w6_barrel_c",
+      "scene-mirror:nd_w6_control",
+      "scene-mirror:nd_w6_wall_l",
+      "scene-mirror:nd_w6_wall_r"
+    ],
+    "rayAfter": {
+      "actor": {
+        "id": 1,
+        "generation": 1,
+        "x": -0.18484283983707428,
+        "y": 0,
+        "height": 2.05,
+        "z": -1.117722988128662,
+        "radius": 0.5,
+        "hp": 220
+      },
+      "distance": 5.153144550659847,
+      "point": [
+        0,
+        0.5,
+        -0.6531445506598468
+      ],
+      "kind": "entity",
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "repeated": {
+      "snapshot": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "pending": 0,
+      "batches": 24
+    },
+    "navPassed": {
+      "x": -0.05500701069831848,
+      "z": 0.9317206144332886
+    },
+    "reset": {
+      "snapshot": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "collision": {
+        "solids": [
+          "nd_fr_ground",
+          "nd_w6_control",
+          "nd_w6_wall_l",
+          "nd_w6_wall_r",
+          "nd_fr_barrel",
+          "nd_w6_barrel_b",
+          "nd_w6_barrel_c"
+        ],
+        "dynamicObstacles": [
+          "nd_fr_barrel",
+          "nd_w6_barrel_b",
+          "nd_w6_barrel_c"
+        ]
+      },
+      "brokenNodes": []
+    },
+    "chainsaw": {
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "batches": 0
+    },
+    "sniper": {
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "batches": 0
+    },
+    "final": {
+      "error": null,
+      "batches": 0,
+      "snapshot": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ]
+    },
+    "late": {
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "batches": 0,
+      "broken": 0,
+      "error": null
+    },
+    "notReady": {
+      "error": "nd_w6_barrel_b：碎片运行时未就绪（等待重试）",
+      "pending": 1,
+      "broken": [
+        "nd_w6_barrel_b"
+      ],
+      "collision": {
+        "solids": [
+          "nd_fr_ground",
+          "nd_w6_control",
+          "nd_w6_wall_l",
+          "nd_w6_wall_r",
+          "nd_fr_barrel",
+          "nd_w6_barrel_c"
+        ],
+        "dynamicObstacles": [
+          "nd_fr_barrel",
+          "nd_w6_barrel_c"
+        ]
+      },
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 0,
+          "broken": true
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ]
+    },
+    "recoveredBackend": {
+      "error": null,
+      "pending": 0,
+      "batches": 24,
+      "broken": [
+        "nd_w6_barrel_b"
+      ]
+    },
+    "lateFailure": {
+      "error": null,
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ],
+      "batches": 0,
+      "broken": []
+    },
+    "stopLate": {
+      "playing": false,
+      "error": null,
+      "batches": 0
+    },
+    "newPlay": {
+      "playing": true,
+      "error": null,
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 40,
+          "broken": false
+        }
+      ]
+    },
+    "failed": {
+      "error": "nd_w6_barrel_c：profile-read — profile 读取失败：Error: probe-bad-profile",
+      "snap": [
+        {
+          "nodeId": "nd_fr_barrel",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_b",
+          "hp": 40,
+          "broken": false
+        },
+        {
+          "nodeId": "nd_w6_barrel_c",
+          "hp": 0,
+          "broken": true
+        }
+      ],
+      "collision": {
+        "solids": [
+          "nd_fr_ground",
+          "nd_w6_control",
+          "nd_w6_wall_l",
+          "nd_w6_wall_r",
+          "nd_fr_barrel",
+          "nd_w6_barrel_b"
+        ],
+        "dynamicObstacles": [
+          "nd_fr_barrel",
+          "nd_w6_barrel_b"
+        ]
+      },
+      "broken": [
+        "nd_w6_barrel_c"
+      ]
+    },
+    "afterStop": {
+      "playing": false,
+      "batches": 0,
+      "broken": 0,
+      "error": null
+    }
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "验证窗口固定在 DISPLAY1",
+      "ok": true,
+      "detail": "{\"left\":1920,\"top\":80,\"width\":1280,\"height\":800,\"windowState\":\"normal\"}"
+    },
+    {
+      "name": "WU-06 场景由原场景选择器可达",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "原生输入前恢复运行态",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "正式场景装载 3 个可破坏对象（初始 intact）",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "可破坏对象初始参与射线与导航阻挡",
+      "ok": true,
+      "detail": "{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"]}"
+    },
+    {
+      "name": "未配置对照与独立墙体仍在静态碰撞中",
+      "ok": true,
+      "detail": "{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"]}"
+    },
+    {
+      "name": "破坏前 NPC 被可破坏屏障挡在另一侧",
+      "ok": true,
+      "detail": "{\"x\":-0.18484283983707428,\"z\":-1.117722988128662,\"unreachable\":1}"
+    },
+    {
+      "name": "原生数字键切到 pistol",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "瞄准点落在游戏画布",
+      "ok": true,
+      "detail": "{\"x\":550.074528977012,\"y\":351.3830540004622,\"d\":0.000008394223684728798,\"point\":[0.0000024016950783689595,0.000008043311011007859],\"canvas\":true,\"behind\":false}"
+    },
+    {
+      "name": "原生手枪攻击真实击碎正式油桶",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "破坏后完整物体 collider 从射线与导航中移除",
+      "ok": true,
+      "detail": "{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"]}"
+    },
+    {
+      "name": "破坏只发生一次且进入碎片表现",
+      "ok": true,
+      "detail": "{\"broken\":{\"snapshot\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}],\"collision\":{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"]},\"batches\":0,\"error\":null,\"brokenNodes\":[\"nd_fr_barrel\"],\"hit\":{\"tick\":405,\"from\":[0.08000078722574294,1.397,1.2100000590592925],\"to\":[0.08000160113725684,1.397,0.6],\"hit\":false}},\"frag\":{\"batches\":6,\"rows\":[{\"count\":1,\"p\":[0.03225322812795639,0.06756670773029327,0.10394936054944992]},{\"count\":1,\"p\":[0.03225322812795639,0.06756670773029327,0.10394936054944992]}]}}"
+    },
+    {
+      "name": "碎片在目标世界位置接管（非原点/T-pose）",
+      "ok": true,
+      "detail": "[{\"count\":1,\"p\":[0.03225322812795639,0.06756670773029327,0.10394936054944992]},{\"count\":1,\"p\":[0.03225322812795639,0.06756670773029327,0.10394936054944992]}]"
+    },
+    {
+      "name": "完整显示按稳定 NodeId 隐藏",
+      "ok": true,
+      "detail": "[\"nd_fr_barrel\"]"
+    },
+    {
+      "name": "破坏后碎片物理静态镜像同步移除目标",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "破坏后真实射线穿透原完整 collider",
+      "ok": true,
+      "detail": "{\"actor\":{\"id\":1,\"generation\":1,\"x\":-0.18484283983707428,\"y\":0,\"height\":2.05,\"z\":-1.117722988128662,\"radius\":0.5,\"hp\":220},\"distance\":5.153144550659847,\"point\":[0,0.5,-0.6531445506598468],\"kind\":\"entity\",\"normal\":[0,0,1]}"
+    },
+    {
+      "name": "重复命中不重复破坏/不重复碎块",
+      "ok": true,
+      "detail": "{\"snapshot\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}],\"pending\":0,\"batches\":24}"
+    },
+    {
+      "name": "破坏后 NPC 通过原屏障缺口（导航同步）",
+      "ok": true,
+      "detail": "{\"x\":-0.05500701069831848,\"z\":0.9317206144332886}"
+    },
+    {
+      "name": "Reset 恢复完整物体/碰撞/导航与显示状态",
+      "ok": true,
+      "detail": "{\"snapshot\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}],\"collision\":{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_fr_barrel\",\"nd_w6_barrel_b\",\"nd_w6_barrel_c\"]},\"brokenNodes\":[]}"
+    },
+    {
+      "name": "原生数字键切到 chainsaw",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "原生电锯在射程内真实击碎目标（忽略自身 collider）",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "原生数字键切到 sniper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "原生贯穿狙击真实击碎目标",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "原生数字键切到 launcher",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "爆炸瞄准点落在游戏画布",
+      "ok": true,
+      "detail": "{\"x\":550.074528977012,\"y\":351.3830540004622,\"d\":0.000008394223684728798,\"point\":[0.0000024016950783689595,0.000008043311011007859],\"canvas\":true,\"behind\":false}"
+    },
+    {
+      "name": "真实爆炸同时击碎范围内 A/B",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "墙后 C 未被爆炸破坏（真实遮挡）",
+      "ok": true,
+      "detail": "[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]"
+    },
+    {
+      "name": "未配置对照不受爆炸影响",
+      "ok": true,
+      "detail": "{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_w6_barrel_c\"]}"
+    },
+    {
+      "name": "破坏表现无诊断错误",
+      "ok": true,
+      "detail": "{\"error\":null,\"batches\":0,\"snapshot\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]}"
+    },
+    {
+      "name": "Reset 后旧代破坏表现不作用于新 run",
+      "ok": true,
+      "detail": "{\"snap\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}],\"batches\":0,\"broken\":0,\"error\":null}"
+    },
+    {
+      "name": "后端未就绪仍先隐藏完整对象并移除镜像",
+      "ok": true,
+      "detail": "{\"error\":\"nd_w6_barrel_b：碎片运行时未就绪（等待重试）\",\"pending\":1,\"broken\":[\"nd_w6_barrel_b\"],\"collision\":{\"solids\":[\"nd_fr_ground\",\"nd_w6_control\",\"nd_w6_wall_l\",\"nd_w6_wall_r\",\"nd_fr_barrel\",\"nd_w6_barrel_c\"],\"dynamicObstacles\":[\"nd_fr_barrel\",\"nd_w6_barrel_c\"]},\"snap\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":0,\"broken\":true},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]}"
+    },
+    {
+      "name": "后端未就绪给出可见诊断",
+      "ok": true,
+      "detail": "\"nd_w6_barrel_b：碎片运行时未就绪（等待重试）\""
+    },
+    {
+      "name": "后端恢复后同一破坏事实重试成功",
+      "ok": true,
+      "detail": "{\"error\":null,\"pending\":0,\"batches\":24,\"broken\":[\"nd_w6_barrel_b\"]}"
+    },
+    {
+      "name": "Reset 后旧代失败回调不写新会话诊断",
+      "ok": true,
+      "detail": "{\"error\":null,\"snap\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}],\"batches\":0,\"broken\":[]}"
+    },
+    {
+      "name": "Stop 后旧 IO 失败不写当前诊断",
+      "ok": true,
+      "detail": "{\"playing\":false,\"error\":null,\"batches\":0}"
+    },
+    {
+      "name": "Stop 旧失败后新 Play 诊断干净且目标 intact",
+      "ok": true,
+      "detail": "{\"playing\":true,\"error\":null,\"snap\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":40,\"broken\":false}]}"
+    },
+    {
+      "name": "表现失败保留玩法事实且诊断可见",
+      "ok": true,
+      "detail": "{\"error\":\"nd_w6_barrel_c：profile-read — profile 读取失败：Error: probe-bad-profile\",\"snap\":[{\"nodeId\":\"nd_fr_barrel\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_b\",\"hp\":40,\"broken\":false},{\"nodeId\":\"nd_w6_barrel_c\",\"hp\":0,\"broken\":true}]}"
+    },
+    {
+      "name": "表现失败仍隐藏完整对象，不留幽灵 collider",
+      "ok": true,
+      "detail": "[\"nd_w6_barrel_c\"]"
+    },
+    {
+      "name": "Pause 不推进、Step 恰一次",
+      "ok": true,
+      "detail": "{\"paused\":{\"tick\":57,\"after\":57,\"isPaused\":true},\"stepped\":58}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":31,\"disposed\":31,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":8,\"afterObjects\":8,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":31,\"disposed\":31,\"pending\":0}"
+    },
+    {
+      "name": "Stop 后恢复且不再残留破坏表现",
+      "ok": true,
+      "detail": "{\"playing\":false,\"batches\":0,\"broken\":0,\"error\":null}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

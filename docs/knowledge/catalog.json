@@ -3351,6 +3351,28 @@
       ],
       "reviewedAt": "2026-10-21",
       "reviewedSourceCommit": "541f8c7f14a024369a5a97f7090f76e1f7384c60"
+    },
+    {
+      "id": "fracture-npc-death-wu07",
+      "path": "docs/architecture/fracture-npc-death-20261022.md",
+      "title": "NPC 当前姿态致死碎裂与真实 GPU 验证（WU-07）",
+      "role": "validation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "fracture",
+        "npc",
+        "skin",
+        "gpu",
+        "lifecycle"
+      ],
+      "read": "正式E-04原生致死、最后可见四权重LBS、posed bounds、真刚体/GPU成功接管与death失败保底、观察视角及生命周期",
+      "sourceRefs": [
+        "scene-schema",
+        "architecture-policy"
+      ],
+      "reviewedAt": "2026-10-22",
+      "reviewedSourceCommit": "c7a2ae3e7b451b6be09a4916077f5956d866fee8"
     }
   ]
 }
