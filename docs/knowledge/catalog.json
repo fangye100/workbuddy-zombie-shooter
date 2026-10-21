@@ -10,9 +10,21 @@
       "role": "framework",
       "authority": "design",
       "status": "historical",
-      "topics": ["fracture", "destruction", "physics", "vfx", "assets", "review"],
+      "topics": [
+        "fracture",
+        "destruction",
+        "physics",
+        "vfx",
+        "assets",
+        "review"
+      ],
       "read": "2026-10-20 开发计划：预破碎资产、真实刚体与简化层、原动态渲染/伤害/导航复用、九个串行 WU；用户已开始、仅派发 WU-01，后续逐单元 exact-target review，不代表实现验收",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"]
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ]
     },
     {
       "id": "vfx-gameplay-integration",
@@ -3327,8 +3339,7 @@
       ],
       "reviewedAt": "2026-10-21",
       "reviewedSourceCommit": "509c343be5b6274714f1c25bd4f38f0a3d66375f"
-    }
-,
+    },
     {
       "id": "fracture-destructibles-wu06",
       "path": "docs/architecture/fracture-destructibles-20261021.md",
@@ -3373,6 +3384,29 @@
       ],
       "reviewedAt": "2026-10-22",
       "reviewedSourceCommit": "e7d4625e7af73db787d1ce0ea2c346d84eec9467"
+    },
+    {
+      "id": "fracture-authoring-wu08",
+      "path": "docs/architecture/fracture-authoring-20261022.md",
+      "title": "碎裂作者配置、独立 Preview 与持久化（WU-08）",
+      "role": "validation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "fracture",
+        "editor",
+        "asset",
+        "persistence",
+        "gpu",
+        "lifecycle"
+      ],
+      "read": "原 Inspector/History/CAS 与正式准备、物理、渲染共用的作者配置和独立预览；实际验收及未完成项见指南。",
+      "sourceRefs": [
+        "scene-schema",
+        "architecture-policy"
+      ],
+      "reviewedAt": "2026-10-22",
+      "reviewedSourceCommit": "c926b543ef0a7502392a55a9d03d5757216bfeee"
     }
   ]
 }

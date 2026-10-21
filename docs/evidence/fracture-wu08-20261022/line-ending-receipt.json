@@ -1,0 +1,122 @@
+[
+  {
+    "path": "apps/editor/src/main.ts",
+    "before": "0a29f71fbc8f6bb26febe631a6f40df5c6e266fdd33a9a9c88f0e999bafe3ba0",
+    "after": "0a29f71fbc8f6bb26febe631a6f40df5c6e266fdd33a9a9c88f0e999bafe3ba0",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/asset-inspector.ts",
+    "before": "9a4e209aeaee63137145d898a7b458937dab1330a54523e110d3fcb95be14288",
+    "after": "9a4e209aeaee63137145d898a7b458937dab1330a54523e110d3fcb95be14288",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/scene-author.css",
+    "before": "3cd28ab471a061dd790118132624b0b0ee4b5bcb527d4bb57df03a51f06d423f",
+    "after": "3cd28ab471a061dd790118132624b0b0ee4b5bcb527d4bb57df03a51f06d423f",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/vfx-document.ts",
+    "before": "d221abc41ed466d11b07c55403790a6675fe3c401b63f20a68c1d01e9ada26cf",
+    "after": "3a0f701022fad4465e38f73af24cfb424c1cdcd802b463db6777d0a66cfcf881",
+    "lineEndingOnly": true
+  },
+  {
+    "path": "apps/editor/src/services/fracture-renderer.ts",
+    "before": "b5a7c0638a000c7c042f087771bd8b71dd31a05252e59385fb8aaab66e3b725b",
+    "after": "44a2e151f34ab8ca3eaeb30341b0ac73ecc1cfe6b3fc7db37180a9718aca0df0",
+    "lineEndingOnly": true
+  },
+  {
+    "path": "packages/runtime/src/fracture-activation.ts",
+    "before": "90b720e670ae24bdfd173d63b752c9837117d41aadf9ded69b1abef7901ec85c",
+    "after": "90b720e670ae24bdfd173d63b752c9837117d41aadf9ded69b1abef7901ec85c",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "packages/runtime/test/fracture-activation.test.ts",
+    "before": "ed2622ce1feee74373ce2e0440bf8738eb3fce19a06ee38f47cf954a46844eba",
+    "after": "ed2622ce1feee74373ce2e0440bf8738eb3fce19a06ee38f47cf954a46844eba",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "packages/render/src/renderer-core.ts",
+    "before": "03f020dd9c9a440dcfe144ac263536f338e42c853d6b8b9ae73772139fa3ec66",
+    "after": "4dd8db272a7744b8a4666b5a72d66dfc675f89653291a50af8a551e62e4e8aaa",
+    "lineEndingOnly": true
+  },
+  {
+    "path": "packages/render/src/skin.ts",
+    "before": "4497d95ddc3baa718e7099ab5f6fb665a8aa042f44c1cef90239b155245ffd55",
+    "after": "4497d95ddc3baa718e7099ab5f6fb665a8aa042f44c1cef90239b155245ffd55",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "packages/render/test/dynamic-batch-lifecycle.test.ts",
+    "before": "de62d7f063551cba92dc76af2b9168b1e5fc9116cf8e6b25dd56999a285242c3",
+    "after": "de62d7f063551cba92dc76af2b9168b1e5fc9116cf8e6b25dd56999a285242c3",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "packages/render/test/skin.test.ts",
+    "before": "95d8369a25b4a86c639ba3152f68f3d02201d704963ab472f8e1770e2901262e",
+    "after": "95d8369a25b4a86c639ba3152f68f3d02201d704963ab472f8e1770e2901262e",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "tools/fs/write-fracture.test.mjs",
+    "before": "4d04d52743e1670a65ac5b35301b293d1a8f2209fc9c088e292c2340d85b04af",
+    "after": "4d04d52743e1670a65ac5b35301b293d1a8f2209fc9c088e292c2340d85b04af",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/author-resource-document.ts",
+    "before": "069ba39d49d7154d0a291e3732e6735cbf326302d9f95b2dac9cb9e9ac249015",
+    "after": "069ba39d49d7154d0a291e3732e6735cbf326302d9f95b2dac9cb9e9ac249015",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/fracture-author-draft.ts",
+    "before": "f142eef144c9b658bc39c8b61ea41aa18eabb06ecdbc7812f60d9e5f0efd1a21",
+    "after": "f142eef144c9b658bc39c8b61ea41aa18eabb06ecdbc7812f60d9e5f0efd1a21",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/fracture-panel.ts",
+    "before": "340a663696f063e5b3587efe7805219675f682f80af6d0030d43f85690e6f7ef",
+    "after": "340a663696f063e5b3587efe7805219675f682f80af6d0030d43f85690e6f7ef",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/src/services/fracture-preview.ts",
+    "before": "6c0bf0f33a3bc67551309c1dc2872e02396225e9b7bc1a9b1cb48e2a8145041d",
+    "after": "6c0bf0f33a3bc67551309c1dc2872e02396225e9b7bc1a9b1cb48e2a8145041d",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/test/author-resource-document.test.ts",
+    "before": "9ebdf43318bf14f4b668914f15676eb2e1b74c5c468286424a8c9aca37856d18",
+    "after": "9ebdf43318bf14f4b668914f15676eb2e1b74c5c468286424a8c9aca37856d18",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/test/fracture-author-draft.test.ts",
+    "before": "218c501942c9c91af483bdf1ca747d2b39f4c12ad779bc475a169c7e2b51d65b",
+    "after": "218c501942c9c91af483bdf1ca747d2b39f4c12ad779bc475a169c7e2b51d65b",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "apps/editor/test/fracture-preview.test.ts",
+    "before": "70dfccb89c1b783071f82215d62217f208df8eee264ac02cf578a57b953b583d",
+    "after": "70dfccb89c1b783071f82215d62217f208df8eee264ac02cf578a57b953b583d",
+    "lineEndingOnly": false
+  },
+  {
+    "path": "tools/verify/wu08-author-probe.mjs",
+    "before": "d573c7ea8ee2e4aa5ef8d8f7b008bb65dee44a993382f3e666d48112e749a802",
+    "after": "d573c7ea8ee2e4aa5ef8d8f7b008bb65dee44a993382f3e666d48112e749a802",
+    "lineEndingOnly": false
+  }
+]

@@ -28,7 +28,8 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
 | 手枪 VFX 资源、GPU 与编辑 | [M1 实现与验证](architecture/vfx-m1-20261019.md) | `scene/vfx` 契约、`runtime/vfx` 池、游戏表现 planner、独立 VfxPass 与编辑器资源/绑定保存 |
 | 七武器 / NPC受击 / 流动燃烧当前契约 | [当前实现与验证边界](architecture/vfx-impact-fire-20261020.md) | v9 flow、真实伤害身份、原作者/图编译、蒙皮表面与预算生命周期 |
-| 离线预破碎与实时刚体碎片（逐单元审核） | [开发技术计划](architecture/fracture-system-development-plan-20261020.md) | 正式预破碎资产、真实三维物理、物体/NPC 接入、九个串行 WU；用户已授权开始，当前仅派发 WU-01，后续须 review 放行，不代表已实现 |
+| 离线预破碎与实时刚体碎片（逐单元审核） | [开发技术计划](architecture/fracture-system-development-plan-20261020.md) | 正式预破碎资产、真实三维物理、物体/NPC 接入、九个串行 WU；按 WU 逐项批准，实际能力见已发布指南与对应批准记录，设计不等于实现 |
+| 碎裂作者配置、Preview 与持久化 | [WU-08 操作及证据](architecture/fracture-authoring-20261022.md) | 原组件/资产 Inspector、独立真物理/GPU Preview、原历史与 CAS；最终放行以冻结提交审核为准 |
 | 实际 Act1 三层 VFX 试玩 | [实战接入与操作](animation/vfx-gameplay-integration.md) | 1–7 换枪、第二层酸液清波与第三层爆尸原路进入、真实阶段/回收/坏资源保底验证及限制 |
 | 敌人与地面 VFX | [M2 实现与验证](architecture/vfx-m2-20261019.md) | 通用标签绑定、v16/v2 兼容、真实敌人事实与平面 GPU、持久化及失败保底 |
 | 持续与动作 VFX、M4 决策 | [M3 实现与验证](architecture/vfx-m3-20261019.md) | 固定tick/seed发射器、曲线作者流程、真实火焰/烟尘/火花/冲锋/近战与预算测量 |
