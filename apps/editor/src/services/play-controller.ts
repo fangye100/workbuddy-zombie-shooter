@@ -243,6 +243,7 @@ export class PlayController {
       this.fractureBinding = this.createFractureBinding(graph);
       // WU-05：碎片动态渲染装配。资源所有权仍在 renderer-core（Play 新分配由
       // PlaySession 账目在 Stop 时 releaseDynamicResources 统一 destroy）。
+      this.renderer.core.resetDynamicDiagnostics?.();
       this.fractureRenderer?.dispose();
       this.fractureRenderer = new PlayFractureRenderer(this.fractureIO);
       this.session.registerResource('fracture-renderer', () => {
@@ -282,7 +283,7 @@ export class PlayController {
     return this.fractureRenderer?.dynamicBatches ?? [];
   }
 
-  /** 本 Play 会话累计的碎片渲染失败次数（GPU 网格构建 + 网格准备）。 */
+  /** 本 Play 会话累计的动态资源构建/绘制失败次数（新 Play 开始时清零）。 */
   get fractureRenderFailures(): number {
     return this.renderer.core.dynamicFailureCount;
   }
@@ -294,7 +295,7 @@ export class PlayController {
     if (current !== null && current !== undefined) return current;
     // 曾经失败但已恢复：保留"发生过 N 次"的明确说明，不冒充当前仍坏。
     const failures = this.renderer.core.dynamicFailureCount;
-    return failures > 0 ? ('曾发生 ' + failures + ' 次 GPU 网格构建失败（当前已恢复）') : null;
+    return failures > 0 ? ('曾发生 ' + failures + ' 次 GPU 动态资源构建/绘制失败（当前已恢复）') : null;
   }
 
   /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
@@ -355,6 +356,9 @@ export class PlayController {
     this.disposeFracture();
     // Reset/换绑：让重置之前挂起的网格读取失效，不能写回新代的渲染缓存。
     this.fractureRenderer?.beginGeneration();
+    // CPU 缓存已换代；core 的 fracture GPU mesh 也按前缀释放，下一次 sync 必须重新上传
+    // 当前资产字节，不能复用同路径的旧 vbuf。
+    this.renderer.core.releaseDynamicMeshesWithPrefix?.('fracture:');
     const doc = this.renderer.getDocument();
     if (doc === null) return;
     const graph = SceneGraph.fromDocument(doc);

@@ -114,4 +114,3 @@ try {
 } finally {
   if (session) { try { session.ws.close(); } catch { /* closed */ } try { session.chrome.kill(); } catch { /* exited */ } }
 }
-

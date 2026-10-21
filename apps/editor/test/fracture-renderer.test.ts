@@ -36,6 +36,29 @@ function makePointCloudGlb(positions: Float32Array): ArrayBuffer {
   return out.buffer;
 }
 
+/** 合法 GLB：声明 baseColorTexture，但 images 为空（无可用内嵌图）。 */
+function makeTexturedGlbWithoutImage(positions: Float32Array): ArrayBuffer {
+  const json = {
+    asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+    materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+    textures: [{ source: 0 }], images: [],
+    accessors: [{ bufferView: 0, componentType: 5126, count: positions.length / 3, type: 'VEC3' }],
+    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: positions.byteLength }],
+    buffers: [{ byteLength: positions.byteLength }],
+  };
+  const enc = new TextEncoder().encode(JSON.stringify(json));
+  const jsonSize = Math.ceil(enc.length / 4) * 4;
+  const out = new Uint8Array(28 + jsonSize + positions.byteLength);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546c67, true); dv.setUint32(4, 2, true); dv.setUint32(8, out.length, true);
+  dv.setUint32(12, jsonSize, true); dv.setUint32(16, 0x4e4f534a, true);
+  out.fill(32, 20, 20 + jsonSize); out.set(enc, 20);
+  dv.setUint32(20 + jsonSize, positions.byteLength, true); dv.setUint32(24 + jsonSize, 0x004e4942, true);
+  out.set(new Uint8Array(positions.buffer, positions.byteOffset, positions.byteLength), 28 + jsonSize);
+  return out.buffer;
+}
+
 function makeIO(glbs: Record<string, ArrayBuffer>) {
   return {
     async readText(): Promise<string> { throw new Error('不需要文本'); },
@@ -125,6 +148,8 @@ describe('WU-05 碎片动态批次装配', () => {
     const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
     const key = Object.keys(binGlob).find((k) => /p01-barrel\/chunk-0001\.glb$/.test(k))!;
     const bytes = await binGlob[key]!();
+    // Node 没有图片解码器：用 4×4 位图替身，让带贴图的资产走成功路径。
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 4, height: 4, close: () => {} } as unknown as ImageBitmap)));
     const io = {
       async readText(): Promise<string> { throw new Error('不需要文本'); },
       async readBinary(): Promise<ArrayBuffer> { return bytes.slice().buffer; },
@@ -152,7 +177,7 @@ describe('WU-05 碎片动态批次装配', () => {
     }
     // 两个子网格：外表面（贴图，albedo 非空）+ 切口（纯色，albedo 为空且带深色 tint）
     expect(renderer.dynamicBatches.length).toBe(2);
-    // node 测试环境没有 createImageBitmap，albedo 一定是 null；用 tint 区分两类子网格
+    // 用 tint 区分两类子网格（贴图外表面为白 tint，切口为 baseColorFactor）
     const solid = renderer.dynamicBatches.find((b) => Math.abs(b.instances[8]! - 1) > 0.01)!;
     const textured = renderer.dynamicBatches.find((b) => Math.abs(b.instances[8]! - 1) <= 0.01)!;
     expect(textured).toBeDefined();
@@ -525,6 +550,90 @@ describe('WU-05 碎片动态批次装配', () => {
     expect(s.textureFileBytes).not.toBe(s.textureUploadBytes);
     expect(s.uploadBytes).toBe(s.geometryBytes + s.textureUploadBytes);
     expect(s.residentBytes).toBe(s.geometryBytes + s.textureResidentBytes);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('Reset 换代后同路径新字节产生新 meshId 与新顶点（不沿用旧 GPU 几何身份）', async () => {
+    let x = 10;
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> {
+        return makePointCloudGlb(new Float32Array([x, 2, 20, x + 2, 2, 20, x, 6, 24]));
+      },
+    };
+    const renderer = new PlayFractureRenderer(io);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'large' as const,
+        mesh: { path: 'same.glb', guid: 'g1' },
+        position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere' as const, radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0] as [number, number, number],
+        linearVelocity: [0, 0, 0] as [number, number, number], angularVelocity: [0, 0, 0] as [number, number, number],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    const first = renderer.dynamicBatches[0]!;
+    expect(first.vertices[0]).toBeCloseTo(10, 5);
+    const firstMeshId = first.meshId;
+
+    renderer.beginGeneration();
+    x = 20;
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    const second = renderer.dynamicBatches[0]!;
+    expect(second.vertices[0]).toBeCloseTo(20, 5);
+    expect(second.meshId).not.toBe(firstMeshId);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('声明 baseColorTexture 但缺图时记录诊断并允许重试，不静默白材质', async () => {
+    const glb = makeTexturedGlbWithoutImage(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    let reads = 0;
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> { reads++; return glb.slice(0); },
+    };
+    const renderer = new PlayFractureRenderer(io, { retryDelayMs: 5 });
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'large' as const,
+        mesh: { path: 'broken-texture.glb', guid: 'g1' },
+        position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere' as const, radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0] as [number, number, number],
+        linearVelocity: [0, 0, 0] as [number, number, number], angularVelocity: [0, 0, 0] as [number, number, number],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    await new Promise((r) => setTimeout(r, 40));
+    renderer.sync(rt, backend);
+    expect(renderer.error).toMatch(/baseColorTexture|贴图/);
+    expect(renderer.dynamicBatches.length).toBe(0);
+    expect(renderer.stats.meshes).toBe(0);
+    const before = reads;
+    await new Promise((r) => setTimeout(r, 20));
+    renderer.sync(rt, backend);
+    expect(reads).toBeGreaterThan(before);
     rt.dispose();
     renderer.dispose();
   }, 30000);

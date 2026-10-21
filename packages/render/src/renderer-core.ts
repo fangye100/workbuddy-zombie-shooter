@@ -942,6 +942,24 @@ export class RendererCore {
     this.dynamicMeshes.clear();
   }
 
+  /** 只释放指定前缀的动态代理网格（碎片 Reset/换代用，不触碰角色或其它 owner）。 */
+  releaseDynamicMeshesWithPrefix(prefix: string): void {
+    for (const [id, m] of [...this.dynamicMeshes]) {
+      if (!id.startsWith(prefix)) continue;
+      m.vbuf.destroy();
+      m.ibuf.destroy();
+      m.skinVb.destroy();
+      this.dynamicMeshes.delete(id);
+      this.dynamicErrors.delete(id);
+    }
+  }
+
+  /** 新 Play 会话开始时清空动态构建诊断（失败计数按会话口径，不跨 Stop 累加）。 */
+  resetDynamicDiagnostics(): void {
+    this.dynamicFailureCount = 0;
+    this.dynamicErrors.clear();
+  }
+
   /**
    * 上传（或撤下）烘焙姿态调色板（binding 4，docs/20 §3.2）。
    *

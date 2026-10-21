@@ -27,6 +27,8 @@ interface SubPart {
 interface MeshEntry {
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
+  /** 几何内容身份（顶点+索引 SHA-256 前缀）：core 的 GPU mesh 缓存按它区分版本。 */
+  geometryKey: string;
   albedo: ImageBitmap | null;
   /** 贴图内容身份（同图共享 GPUTexture）；无贴图为 null。 */
   textureKey: string | null;
@@ -202,7 +204,7 @@ export class PlayFractureRenderer {
         if (hit === undefined) {
           groups.set(key, {
             batch: {
-              meshId: 'fracture:' + chunk.mesh.path,
+              meshId: 'fracture:' + chunk.mesh.path + '#' + entry.geometryKey,
               vertices: entry.vertices,
               indices: entry.indices,
               skin: null,
@@ -328,6 +330,14 @@ export class PlayFractureRenderer {
         const verts = new Float32Array(parsed.mesh.vertices.length);
         verts.set(parsed.mesh.vertices);
         const count = Math.floor(verts.length / 15);
+        // 几何身份：同一路径在 Reset/换代后可能读到新字节，GPU 缓存不能按 path 复用旧顶点。
+        const geoBytes = new Uint8Array(verts.byteLength + parsed.mesh.indices.byteLength);
+        geoBytes.set(new Uint8Array(verts.buffer, verts.byteOffset, verts.byteLength), 0);
+        geoBytes.set(new Uint8Array(parsed.mesh.indices.buffer, parsed.mesh.indices.byteOffset,
+          parsed.mesh.indices.byteLength), verts.byteLength);
+        const geoDigest = await crypto.subtle.digest('SHA-256', geoBytes);
+        const geometryKey = Array.from(new Uint8Array(geoDigest).slice(0, 8),
+          (b) => b.toString(16).padStart(2, '0')).join('');
         let textureKey: string | null = null;
         let textureFileBytes = 0, textureUploadBytes = 0, textureResidentBytes = 0;
         if (parsed.image !== null && typeof createImageBitmap === 'function') {
@@ -352,13 +362,18 @@ export class PlayFractureRenderer {
               : [f === null ? 1 : f[0], f === null ? 1 : f[1], f === null ? 1 : f[2]],
           };
         });
+        // 声明了 baseColorTexture 却没有可用内嵌图像（或当前环境不能解码）：
+        // 必须走统一失败/重试路径，不能静默退化成白色材质。
+        if (parts.some((p) => p.textured) && albedo === null) {
+          throw new Error('baseColorTexture 缺少可用内嵌图像或当前环境无法解码贴图');
+        }
         // Stop/换代之后才完成的读取：丢弃结果、关闭 bitmap，不写回缓存/统计。
         if (this.disposed || gen !== this.generation) {
           albedo?.close();
           return;
         }
         const entry: MeshEntry = {
-          vertices: verts, indices: parsed.mesh.indices, albedo, textureKey,
+          vertices: verts, indices: parsed.mesh.indices, geometryKey, albedo, textureKey,
           textureFileBytes, textureUploadBytes, textureResidentBytes, parts,
         };
         this.meshes.set(path, entry);

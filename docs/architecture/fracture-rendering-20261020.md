@@ -80,7 +80,8 @@
 - `PlayController.start()` → 受控 `spawnFracture`（正式 P-01 profile，事件 scale=3，
   渲染验收注入而非真实武器破坏）→ `accepted=true`。
 - 统计：12 块 → 24 批次（每块外表面 + 切口各一批）、12 个网格、37,260 三角形；
-  整帧 drawCall 从 118 增至 142（+24），三角形增加约 4.4 万。
+  碎片固定新增 24 个 draw。整帧 drawCall 绝对值随相机可见静态集变化（历史取样 118→142，
+  另一机位复核为 73），不作为固定成本结论。
 - 材质：浏览器侧逐批读取 `{tex:true,tint:[1,1,1]}` 与
   `{tex:false,tint:[0.09,0.062,0.055]}`，与 GLB 的 outer/inner 材质一致。
 - 资源量：12 个碎片网格的几何提交为 5,741,472 字节（顶点 + 索引 + 全零 skin slot）；
@@ -90,7 +91,7 @@
   instanceBytes；GPU 缓存按 meshId 只上传一次，同图按内容身份只计一次。
 - 截图：`.workbuddy/tmp/wu05-gpu/fracture-air.png`（空中翻滚）、
   `fracture-play.png`（落地）。
-- Pause/Step：暂停后碎片 tick 不变（153→153），单步 +1（153→154），与游戏时钟一致。
+- Pause/Step：暂停后碎片 tick 不变，单步 +1（本次样本 162→162、163），与游戏时钟一致。
 - 近景：探针把碎片放在相机与玩家之间 20% 处、事件 scale=3，可清楚看到外表面
   贴图（油桶锈红木条）与深色切口平面，三轴旋转与描边正常。
 - Stop：batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0，
@@ -136,6 +137,14 @@ nvidia/lovelace、fallback=false）：
   同一路径只新增 1 个 GPU mesh，几何仍合批。
 - 结果：`.workbuddy/tmp/wu05-pivot-gpu/result.json`。
 
+`node tools/verify/wu05-reset-geometry-probe.mjs`（同一 headed/GPU 条件）：
+
+- Reset 后同一路径返回不同 GLB 字节：CPU 顶点 10→20，meshId 的内容身份从
+  `#81f5153a…` 变为 `#0f8a7835…`；`queue.writeBuffer` 观测到新顶点 20 的真实上传，
+  旧 `fracture:` GPU mesh 在 Reset 时释放，网格数不累积。
+- 结论：CPU 与 core 的缓存身份都覆盖“同路径新几何”，不会再画旧 vbuf。
+- 结果：`.workbuddy/tmp/wu05-reset-geometry/result.json`。
+
 ## 边界与遗留
 
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
@@ -147,11 +156,14 @@ nvidia/lovelace、fallback=false）：
   绑定组、材质的 GPUTexture 与绑定组都走“先建后提交”。任一步失败只销毁本次新建
   对象；已有有效 slot 和共享材质不被失败尝试误毁。成功构建会清除对应诊断项。
 - 失败降级：任一批次的资源构建或 draw 抛错只跳过该批并记录
-  `core.dynamicError`（计数累计到 fractureRenderFailures），异常不再冲进 main.frame；
-  其余批次继续绘制，恢复后诊断回到“曾发生 N 次（当前已恢复）”。
-- 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次（探针记录 charBatches=2、本帧未上传
-  调色板），因此「原角色 palette/transition/hit/burn」的 headed 对照仍待含蒙皮
-  NPC 的场景验证；shader 的 bit0 分支未被刚体模式改动，pose-palette /
-  pose-transition / skin 的 owner 测试通过。
+  `core.dynamicError`（计数累计到 fractureRenderFailures，开始新 Play 时清零），
+  异常不再冲进 main.frame；其余批次继续绘制，恢复后诊断回到
+  “曾发生 N 次 GPU 动态资源构建/绘制失败（当前已恢复）”。
+- 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次；shader 的 bit0 分支未被刚体模式
+  改动，pose-palette / pose-transition / skin 的 owner 测试通过，dynamic-skin headed
+  套件 35/35（palette uploads=2），floor-1 的真实 J 命中与火焰燃烧见上。仍不宣称
+  所有含蒙皮 NPC 的关卡与姿态组合都已覆盖。
+- 贴图缺失：声明 `baseColorTexture` 但 GLB 没有可用内嵌图像（或环境不能解码）时，
+  记录路径诊断并进入 2 秒重试，不静默退化为白色材质；owner 测试覆盖该失败路径。
 - 逐网格 GPU 缓存在 Stop 统一释放；按 TTL 逐网格回收属后续优化。
 - GPU 压力/跨模式成本认证属 WU-09，本指南不宣称性能上限。
