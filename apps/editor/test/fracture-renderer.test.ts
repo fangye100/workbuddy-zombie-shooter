@@ -4,7 +4,7 @@
  * 覆盖：网格原始 POSITION 减 pivot、实例行/刚体基向量的三轴数学、large 读真实后端
  * 快照、small 读简化 sim、缺失网格不崩、dispose 释放 CPU 缓存且不误动共享资源。
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import { PlayFractureRenderer } from '../src/services/fracture-renderer';
 import { ensureRapier, RapierFractureBackend, type RapierModule } from '@aether/runtime';
 import { createFractureRuntime } from '@aether/runtime';
@@ -13,6 +13,7 @@ import { frozenFractureEvent } from '@aether/runtime';
 const STEP = 1 / 60;
 let rapier: RapierModule;
 beforeAll(async () => { rapier = await ensureRapier(); }, 30000);
+afterEach(() => { vi.unstubAllGlobals(); });
 
 /** 手写合法 GLB：单 mesh 单 primitive，只有 POSITION（无 node 变换）。 */
 function makePointCloudGlb(positions: Float32Array): ArrayBuffer {
@@ -56,13 +57,14 @@ const ev = frozenFractureEvent({
 });
 
 describe('WU-05 碎片动态批次装配', () => {
-  it('网格原始 POSITION 减 pivot；实例基向量含旋转与尺度', async () => {
-    // 顶点在 (10,2,20) 等已知位置；pivot=(9,1,19) → 局部系应为 (1,1,1) ...
+  it('几何保持原始坐标，实例平移补偿 pivot；基向量含旋转与尺度', async () => {
+    // 顶点在 (10,2,20) 等已知位置；pivot=(9,1,19)。几何不再预减 pivot，
+    // 由实例平移 position - R·pivot 补偿，多个合法 pivot 才能共享同一份几何。
     const glb = makePointCloudGlb(new Float32Array([10, 2, 20, 12, 2, 20, 10, 6, 24]));
     const io = makeIO({ 'chunk.glb': glb });
     const renderer = new PlayFractureRenderer(io);
 
-    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
     const rt = createFractureRuntime(backend);
     const q: [number, number, number, number] = [0, 0, Math.SQRT1_2, Math.SQRT1_2]; // 绕 Z 90°
     expect(rt.play({
@@ -89,19 +91,31 @@ describe('WU-05 碎片动态批次装配', () => {
     if (batch === undefined) return;
     expect(batch.count).toBe(1);
     expect(batch.rigid).toBeDefined();
-    // 顶点：raw - pivot，保留 15 浮点步长
+    // 顶点：保持资产原始坐标，保留 15 浮点步长
     const v0 = batch.vertices;
-    expect(v0[0]).toBeCloseTo(1, 5);
-    expect(v0[1]).toBeCloseTo(1, 5);
-    expect(v0[2]).toBeCloseTo(1, 5);
-    expect(v0[15]).toBeCloseTo(3, 5);
+    expect(v0[0]).toBeCloseTo(10, 5);
+    expect(v0[1]).toBeCloseTo(2, 5);
+    expect(v0[2]).toBeCloseTo(20, 5);
+    expect(v0[15]).toBeCloseTo(12, 5);
     // 基向量：绕 Z 90° + scale 2 → 列 0 = (0,2,0)，列 1 = (-2,0,0)
     const r = batch.rigid!;
     expect(r[0]).toBeCloseTo(0, 5);  expect(r[1]).toBeCloseTo(2, 5);  expect(r[2]).toBeCloseTo(0, 5);
     expect(r[4]).toBeCloseTo(-2, 5); expect(r[5]).toBeCloseTo(0, 5);  expect(r[6]).toBeCloseTo(0, 5);
     expect(r[8]).toBeCloseTo(0, 5);  expect(r[9]).toBeCloseTo(0, 5);  expect(r[10]).toBeCloseTo(2, 5);
-    // 实例行：位置来自真实后端快照，flags bit1=刚体
-    expect(batch.instances[0]).toBeCloseTo(5, 4);
+    // 实例平移来自真实后端快照并减掉 R·pivot：
+    // R·(9,1,19) = (-2,18,38)，snapshot=(5,3,1) → (7,-15,-37)
+    expect(batch.instances[0]).toBeCloseTo(7, 4);
+    expect(batch.instances[1]).toBeCloseTo(-15, 4);
+    expect(batch.instances[2]).toBeCloseTo(-37, 4);
+    // 闭式世界位置 = position + R·(raw - pivot) = (3,5,3)
+    const world = [
+      r[0]! * v0[0]! + r[4]! * v0[1]! + r[8]! * v0[2]! + batch.instances[0]!,
+      r[1]! * v0[0]! + r[5]! * v0[1]! + r[9]! * v0[2]! + batch.instances[1]!,
+      r[2]! * v0[0]! + r[6]! * v0[1]! + r[10]! * v0[2]! + batch.instances[2]!,
+    ];
+    expect(world[0]).toBeCloseTo(3, 4);
+    expect(world[1]).toBeCloseTo(5, 4);
+    expect(world[2]).toBeCloseTo(3, 4);
     expect((batch.instances[14] ?? 0) & 2).toBe(2);
     rt.dispose();
     renderer.dispose();
@@ -386,6 +400,131 @@ describe('WU-05 碎片动态批次装配', () => {
     expect(renderer.dynamicBatches[0]!.count).toBe(3);
     expect(renderer.dynamicBatches[0]!.instances.length).toBe(3 * 20);
     expect(renderer.dynamicBatches[0]!.rigid!.length).toBe(3 * 12);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('同 GLB 不同合法 pivot 共享几何但各自补偿，不串位', async () => {
+    const glb = makePointCloudGlb(new Float32Array([10, 2, 20, 12, 2, 20, 10, 6, 24]));
+    const renderer = new PlayFractureRenderer(makeIO({ 'chunk.glb': glb }));
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+    const rt = createFractureRuntime(backend);
+    const mk = (id: string, pivot: [number, number, number], x: number) => ({
+      chunkId: id, cls: 'large' as const,
+      mesh: { path: 'chunk.glb', guid: 'g1' },
+      position: [x, 3, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+      shape: { type: 'sphere' as const, radius: 0.25 },
+      mass: 1, friction: 0.5, restitution: 0, pivot,
+      linearVelocity: [0, 0, 0] as [number, number, number], angularVelocity: [0, 0, 0] as [number, number, number],
+    });
+    expect(rt.play({
+      event: ev, chunks: [mk('a', [0, 0, 0], 0), mk('b', [2, 0, 0], 10)],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    // 同几何同材质仍合批：1 批 2 实例，不是按 pivot 复制几何
+    expect(renderer.dynamicBatches.length).toBe(1);
+    const batch = renderer.dynamicBatches[0]!;
+    expect(batch.count).toBe(2);
+    const rendered: number[] = [];
+    for (let n = 0; n < batch.count; n++) rendered.push(batch.instances[n * 20]! + batch.vertices[0]!);
+    rendered.sort((a, b) => a - b);
+    // 原始顶点 x=10；pivot 0 / 2 分别得到世界 10 / 18（错位修复前是 10 / 20）
+    expect(rendered[0]).toBeCloseTo(10, 4);
+    expect(rendered[1]).toBeCloseTo(18, 4);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('换代重置后同路径重新装配仍按当前 pivot 定向', async () => {
+    const glb = makePointCloudGlb(new Float32Array([10, 2, 20, 12, 2, 20, 10, 6, 24]));
+    const renderer = new PlayFractureRenderer(makeIO({ 'chunk.glb': glb }));
+    const mkPlay = (pivot: [number, number, number], x: number) => {
+      const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+      const rt = createFractureRuntime(backend);
+      expect(rt.play({
+        event: ev,
+        chunks: [{
+          chunkId: 'c1', cls: 'large' as const,
+          mesh: { path: 'chunk.glb', guid: 'g1' },
+          position: [x, 3, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+          shape: { type: 'sphere' as const, radius: 0.25 },
+          mass: 1, friction: 0.5, restitution: 0, pivot,
+          linearVelocity: [0, 0, 0] as [number, number, number], angularVelocity: [0, 0, 0] as [number, number, number],
+        }],
+        priority: 1, lifetimeSec: 10, fadeSec: 0,
+      }).accepted).toBe(true);
+      rt.stepOnce();
+      return { rt, backend };
+    };
+    const first = mkPlay([2, 0, 0], 10);
+    renderer.sync(first.rt, first.backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(first.rt, first.backend);
+    }
+    expect(renderer.dynamicBatches[0]!.instances[0]).toBeCloseTo(8, 4);
+    renderer.beginGeneration();
+    first.rt.dispose();
+
+    const second = mkPlay([0, 0, 0], 0);
+    renderer.sync(second.rt, second.backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(second.rt, second.backend);
+    }
+    // 换代后必须重新装配当前 pivot，而不是复用上一代平移
+    expect(renderer.stats.meshes).toBe(1);
+    expect(renderer.dynamicBatches[0]!.instances[0]).toBeCloseTo(0, 4);
+    second.rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('统计区分编码文件字节、解码像素提交与含 mip 驻留', async () => {
+    const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const key = Object.keys(binGlob).find((k) => /p01-barrel\/chunk-0001\.glb$/.test(k))!;
+    const bytes = await binGlob[key]!();
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要文本'); },
+      async readBinary(): Promise<ArrayBuffer> { return bytes.slice().buffer; },
+    };
+    // Node 没有图片解码器：用与正式 P-01 一致的 4096² RGBA8 尺寸替身，只验证口径。
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 4096, height: 4096, close: () => {} } as unknown as ImageBitmap)));
+    const renderer = new PlayFractureRenderer(io);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'large' as const,
+        mesh: { path: 'chunk-0001.glb', guid: 'g1' },
+        position: [0, 3, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+        shape: { type: 'sphere' as const, radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0.162673, 0.114231, 0.168472] as [number, number, number],
+        linearVelocity: [0, 0, 0] as [number, number, number], angularVelocity: [0, 0, 0] as [number, number, number],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    const s = renderer.stats;
+    expect(s.textures).toBe(1);
+    expect(s.textureFileBytes).toBeGreaterThan(0);
+    expect(s.textureUploadBytes).toBe(4096 * 4096 * 4);
+    expect(s.textureResidentBytes).toBeGreaterThan(s.textureUploadBytes);
+    // 文件压缩体积不能冒充 GPU 提交量
+    expect(s.textureFileBytes).not.toBe(s.textureUploadBytes);
+    expect(s.uploadBytes).toBe(s.geometryBytes + s.textureUploadBytes);
+    expect(s.residentBytes).toBe(s.geometryBytes + s.textureResidentBytes);
     rt.dispose();
     renderer.dispose();
   }, 30000);

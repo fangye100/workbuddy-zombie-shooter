@@ -299,7 +299,11 @@ export class PlayController {
 
   /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
   get fractureRenderStats() {
-    return this.fractureRenderer?.stats ?? { meshes: 0, instances: 0, triangles: 0 };
+    return this.fractureRenderer?.stats ?? {
+      meshes: 0, instances: 0, triangles: 0, textures: 0,
+      geometryBytes: 0, textureFileBytes: 0, textureUploadBytes: 0, textureResidentBytes: 0,
+      uploadBytes: 0, residentBytes: 0, instanceBytes: 0,
+    };
   }
 
   /** 把当前运行时状态同步成动态批次（large 读后端快照，small 读简化 sim）。 */

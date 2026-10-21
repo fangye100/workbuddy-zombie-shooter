@@ -29,8 +29,11 @@
 
 ## 坐标与材质
 
-- 网格：`parseGlb(buffer, null, 'auto', { normalize: false })` 取原始 POSITION，逐顶点
-  减去 `profile.pivot`，使 body 原点 = pivot；再由基向量与位置组合一次。
+- 网格：`parseGlb(buffer, null, 'auto', { normalize: false })` 取原始 POSITION 并**保持
+  资产原始坐标**（不在缓存里减 pivot）。每个实例用 `position - R·(worldScale·pivot)`
+  作为平移，再由刚体基向量组合一次：`world = R·raw + (position - R·pivot)`，与
+  `position + R·(raw - pivot)` 等价。这样同一 GLB 的不同合法 pivot 共享一份几何与
+  一个 GPU mesh，不会串用已重基准的顶点，也仍能同几何同材质合批。
 - 子网格：按 `subMeshes` 拆批次。带 `baseColorTexture` 的（外表面）用贴图 + 白色
   tint；纯色材质（切口，`baseColorFactor`）用共享白色材质 + 该颜色 tint。同一
   `meshId` 的几何只上传一次，多个批次用 `indexStart/indexCount` 画各自区间。
@@ -55,8 +58,15 @@
 
 
 - 贴图共享：同一张 baseColor 图（按字节 SHA-256 内容身份）只建一份 GPUTexture/材质，
-  12 个 P-01 碎块共用 1 份 4096 贴图；fractureRenderStats.textures 记录唯一纹理数，
-  uploadBytes 计入几何 + 全零 skin slot + 唯一纹理字节（实测 8,097,006）。
+  12 个 P-01 碎块共用 1 份 4096 贴图；fractureRenderStats.textures 记录唯一纹理数。
+  字节口径分开记录，不再把 JPEG 文件长度当 GPU 量：
+  `textureFileBytes`（源文件 IO）、`textureUploadBytes`（解码基础级 RGBA8 提交）、
+  `textureResidentBytes`（基础级 + mip 链驻留）、`geometryBytes`（顶点+索引+全零
+  skin slot）、`uploadBytes = geometryBytes + textureUploadBytes`、
+  `residentBytes = geometryBytes + textureResidentBytes`、
+  `instanceBytes`（本帧 20+12 float 实例行写入量）。P-01 实测：
+  geometry 5,741,472 / file 2,355,534 / upload 72,850,336 / resident 95,219,956 /
+  instance 3,072。
 - Reset/换绑：PlayController.rebuildFractureBinding 调 beginGeneration()，让换绑前
   挂起的读取按代次失效（Stop 与 Reset 两条路径都不回填缓存）。
 - 纹理失败：新增/解析 baseColor 图失败会进入统一失败处理（fractureRenderError +
@@ -73,8 +83,11 @@
   整帧 drawCall 从 118 增至 142（+24），三角形增加约 4.4 万。
 - 材质：浏览器侧逐批读取 `{tex:true,tint:[1,1,1]}` 与
   `{tex:false,tint:[0.09,0.062,0.055]}`，与 GLB 的 outer/inner 材质一致。
-- 资源量：12 个碎片网格共上传 5,741,472 字节（顶点 + 索引 + 全零 skin slot），
-  由 fractureRenderStats.uploadBytes 记录；GPU 缓存按 meshId 只上传一次。
+- 资源量：12 个碎片网格的几何提交为 5,741,472 字节（顶点 + 索引 + 全零 skin slot）；
+  4096² rgba8unorm 贴图基础级提交 67,108,864 字节、含 13 级 mip 驻留 89,478,484
+  字节。fractureRenderStats 记录 geometryBytes / textureFileBytes /
+  textureUploadBytes / textureResidentBytes / uploadBytes / residentBytes /
+  instanceBytes；GPU 缓存按 meshId 只上传一次，同图按内容身份只计一次。
 - 截图：`.workbuddy/tmp/wu05-gpu/fracture-air.png`（空中翻滚）、
   `fracture-play.png`（落地）。
 - Pause/Step：暂停后碎片 tick 不变（153→153），单步 +1（153→154），与游戏时钟一致。
@@ -100,6 +113,29 @@
 - 玩家死亡后 \`outcome=game-over\`，碎片 tick 与实例位置在后续 10 帧保持不变；
 - \`reset()\` 后旧 24 个批次清零、渲染统计归零，新代重新激活可再出批次。
 
+## 动态分配事务验收（headed 真实 GPU，2026-10-21）
+
+`node tools/verify/wu05-dynamic-fault-probe.mjs`（DISPLAY1 1920,80，严格 TLS，
+nvidia/lovelace、fallback=false）：
+
+- 依次在 pose / instances / rigid / 实例绑定组 / 材质贴图 / 材质绑定组六个阶段，
+  通过真实 `createBuffer` / `createTexture` / `createBindGroup` 注入一次失败；
+  纯色切口材质的绑定组用同一产品方法直接补测。
+- 每个阶段失败瞬间：未登记孤儿 0；`fractureRenderFailures` 递增、
+  `fractureRenderError` 可见；其余批次继续存在，恢复后继续绘制（142–143 draws）。
+- 同一实例槽连续两次失败不累积孤儿；Stop 后跟踪的 buffer/贴图全部销毁，
+  ledger `registered=792 / disposed=792 / pending=0`。
+- 原始结果：`.workbuddy/tmp/wu05-faults/result.json`；正常路径统计见
+  `.workbuddy/tmp/wu05-gpu/`。
+
+`node tools/verify/wu05-pivot-gpu-probe.mjs`（同一 headed/GPU 条件）：
+
+- 同一真实 GLB（chunk-0001）用 pivot 0 与 0.162673 两个实例、body x=0 / 0.5 同时激活；
+  2 个批次各 2 实例，实例平移为 0 / 0.337327，未退化成 0 / 0.5。
+- 拦截 `queue.writeBuffer` 确认 GPU 的 dynamic-instances buffer 实际收到 0.337327；
+  同一路径只新增 1 个 GPU mesh，几何仍合批。
+- 结果：`.workbuddy/tmp/wu05-pivot-gpu/result.json`。
+
 ## 边界与遗留
 
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
@@ -107,10 +143,12 @@
 - 逐实例淡出：运行时 chunk.fade(0..1) 写入刚体基向量 m0.w，主表面与描边都使用该
   alpha；描边在 alpha<1 时放弃后处理的「不透明 ink 豁免」（aux.a=0），否则描边会以
   全强度 ink 盖住已透明的主表面。alpha=1 的旧角色输出与不透明一致。
-- GPU 网格构建失败：vbuf/ibuf/skinVb 任一创建失败都会销毁已建 buffer；失败按 meshId
-  记录（成功构建清除该项），并累计到 fractureRenderFailures 供宿主诊断。
-- 部分分配失败：动态网格的 vbuf/ibuf/skinVb 任一创建失败会销毁已建 buffer、记录
-  core.dynamicError 并跳过该批，不留半成品 GPU 资源。
+- GPU 构建事务：网格的 vbuf/ibuf/skinVb、实例槽的 pose/instances/rigid buffer 与
+  绑定组、材质的 GPUTexture 与绑定组都走“先建后提交”。任一步失败只销毁本次新建
+  对象；已有有效 slot 和共享材质不被失败尝试误毁。成功构建会清除对应诊断项。
+- 失败降级：任一批次的资源构建或 draw 抛错只跳过该批并记录
+  `core.dynamicError`（计数累计到 fractureRenderFailures），异常不再冲进 main.frame；
+  其余批次继续绘制，恢复后诊断回到“曾发生 N 次（当前已恢复）”。
 - 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次（探针记录 charBatches=2、本帧未上传
   调色板），因此「原角色 palette/transition/hit/burn」的 headed 对照仍待含蒙皮
   NPC 的场景验证；shader 的 bit0 分支未被刚体模式改动，pose-palette /

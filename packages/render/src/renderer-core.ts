@@ -878,33 +878,58 @@ export class RendererCore {
 
   /** 动态材质缓存：textureKey（内容身份）或 meshId → 纹理 + bind group。 */
   private readonly dynamicMaterials = new Map<string, { texture: GPUTexture; material: GPUBindGroup }>();
-  private materialFor(b: CoreDynamicBatch): GPUBindGroup {
+  private materialFor(b: CoreDynamicBatch): GPUBindGroup | null {
     if (b.albedo === null || b.albedo === undefined) return this.solidDynamicMaterial();
     const key = b.textureKey ?? ('mesh:' + b.meshId);
     const hit = this.dynamicMaterials.get(key);
     if (hit !== undefined) return hit.material;
-    const texture = createAlbedoTexture(this.device, b.albedo);
-    const material = this.device.createBindGroup({ layout: this.dynamicMaterialLayout, entries: [
-      { binding: 0, resource: texture.createView() }, { binding: 1, resource: this.sampler },
-    ] });
-    this.dynamicMaterials.set(key, { texture, material });
-    return material;
+    // 事务：纹理在创建瞬间就登记；后续 mip/绑定组任一步失败都销毁它，不留半成品。
+    let texture: GPUTexture | null = null;
+    try {
+      const created = createAlbedoTexture(this.device, b.albedo, (tex) => { texture = tex; });
+      texture = created;
+      const material = this.device.createBindGroup({ layout: this.dynamicMaterialLayout, entries: [
+        { binding: 0, resource: created.createView() }, { binding: 1, resource: this.sampler },
+      ] });
+      this.dynamicMaterials.set(key, { texture: created, material });
+      this.dynamicErrors.delete('dynamic-material:' + key);
+      return material;
+    } catch (e) {
+      texture?.destroy();
+      this.recordDynamicFailure('dynamic-material:' + key, e);
+      return null;
+    }
+  }
+
+  /** 记录动态批次构建/绘制失败：诊断可读、计数可见，调用方据此降级而不中断主帧。 */
+  private recordDynamicFailure(key: string, e: unknown): void {
+    this.dynamicFailureCount++;
+    this.dynamicErrors.set(key, key + '：' + (e instanceof Error ? e.message : String(e)));
   }
 
   /** 共享白色材质（无 albedo 的批次用；颜色由实例 color 提供）。懒创建。 */
   private solidDynamicMaterialCache: GPUBindGroup | null = null;
   private solidDynamicTexture: GPUTexture | null = null;
-  private solidDynamicMaterial(): GPUBindGroup {
+  private solidDynamicMaterial(): GPUBindGroup | null {
     if (this.solidDynamicMaterialCache !== null) return this.solidDynamicMaterialCache;
     const tex = this.device.createTexture({ label: 'dyn-solid', size: [1, 1], format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
-    this.device.queue.writeTexture({ texture: tex }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
-    this.solidDynamicTexture = tex;
-    this.solidDynamicMaterialCache = this.device.createBindGroup({
-      label: 'dyn-solid-material', layout: this.dynamicMaterialLayout,
-      entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: this.sampler }],
-    });
-    return this.solidDynamicMaterialCache;
+    try {
+      this.device.queue.writeTexture({ texture: tex }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
+      const material = this.device.createBindGroup({
+        label: 'dyn-solid-material', layout: this.dynamicMaterialLayout,
+        entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: this.sampler }],
+      });
+      this.solidDynamicTexture = tex;
+      this.solidDynamicMaterialCache = material;
+      this.dynamicErrors.delete('dynamic-solid-material');
+      return material;
+    } catch (e) {
+      // 事务：绑定组失败时本次新建的纹理不能留在 GPU 上。
+      tex.destroy();
+      this.recordDynamicFailure('dynamic-solid-material', e);
+      return null;
+    }
   }
 
   /** 丢弃全部已缓存的动态代理网格（换关卡 / 代理体参数变了时调用） */
@@ -962,54 +987,67 @@ export class RendererCore {
       const n = Math.min(b.count, Math.floor(b.instances.length / DYNAMIC_INSTANCE_FLOATS));
       if (n <= 0) continue;
       // 每批次写进自己的 buffer：共用一份则所有 draw 都会读到最后一次上传（见字段注释）
-      const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64);
-      this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
-      if (b.rigid !== undefined && b.rigid.length > 0) {
-        const nRigid = Math.min(n, Math.floor(b.rigid.length / RIGID_INSTANCE_FLOATS));
-        this.device.queue.writeBuffer(slot.rigidBuf, 0, b.rigid, 0, nRigid * RIGID_INSTANCE_FLOATS);
-      }
-      if (b.poseTransitions && (slot.poseData !== b.poseTransitions.data || slot.poseRevision !== b.poseTransitions.revision)) {
-        this.device.queue.writeBuffer(slot.poseBuf, 0, b.poseTransitions.data);
-        slot.poseData = b.poseTransitions.data; slot.poseRevision = b.poseTransitions.revision;
-      }
-      pass.setBindGroup(0, slot.bg);
-      // 无 albedo 的批次（如切口纯色材质）用共享白色材质，颜色由实例 color 携带，
-      // 这样同一份几何/材质可被多个子网格批次复用，不复制纹理。
-      pass.setBindGroup(1, this.materialFor(b));
-      pass.setVertexBuffer(0, mesh.vbuf);
-      pass.setVertexBuffer(1, mesh.skinVb);
-      pass.setIndexBuffer(mesh.ibuf, 'uint32');
-      pass.setPipeline(this.dynamicPipeline);
-      const first = Math.max(0, b.indexStart ?? 0);
-      const count = Math.min(b.indexCount ?? mesh.indexCount, mesh.indexCount - first);
-      if (count <= 0) continue;
-      pass.drawIndexed(count, n, first);
-      draws++;
-      if (wantOutline && b.outline) {
-        pass.setPipeline(this.dynamicOutlinePipeline);
+      // 局部资源构建/绘制失败只降级当前批次：记录诊断、跳过 draw，不让异常冲进主帧。
+      try {
+        const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64);
+        if (slot === null) continue;
+        this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
+        if (b.rigid !== undefined && b.rigid.length > 0) {
+          const nRigid = Math.min(n, Math.floor(b.rigid.length / RIGID_INSTANCE_FLOATS));
+          this.device.queue.writeBuffer(slot.rigidBuf, 0, b.rigid, 0, nRigid * RIGID_INSTANCE_FLOATS);
+        }
+        if (b.poseTransitions && (slot.poseData !== b.poseTransitions.data || slot.poseRevision !== b.poseTransitions.revision)) {
+          this.device.queue.writeBuffer(slot.poseBuf, 0, b.poseTransitions.data);
+          slot.poseData = b.poseTransitions.data; slot.poseRevision = b.poseTransitions.revision;
+        }
+        const material = this.materialFor(b);
+        if (material === null) continue;
+        pass.setBindGroup(0, slot.bg);
+        // 无 albedo 的批次（如切口纯色材质）用共享白色材质，颜色由实例 color 携带，
+        // 这样同一份几何/材质可被多个子网格批次复用，不复制纹理。
+        pass.setBindGroup(1, material);
+        pass.setVertexBuffer(0, mesh.vbuf);
+        pass.setVertexBuffer(1, mesh.skinVb);
+        pass.setIndexBuffer(mesh.ibuf, 'uint32');
+        pass.setPipeline(this.dynamicPipeline);
+        const first = Math.max(0, b.indexStart ?? 0);
+        const count = Math.min(b.indexCount ?? mesh.indexCount, mesh.indexCount - first);
+        if (count <= 0) continue;
         pass.drawIndexed(count, n, first);
         draws++;
+        if (wantOutline && b.outline) {
+          pass.setPipeline(this.dynamicOutlinePipeline);
+          pass.drawIndexed(count, n, first);
+          draws++;
+        }
+      } catch (e) {
+        this.recordDynamicFailure(b.meshId, e);
       }
     }
     return draws;
   }
 
   /** 取（或按需扩容）第 `i` 个批次的实例 buffer + bind group。容量只增不减，避免每帧重建。 */
-  private dynamicInstSlot(i: number, count: number, poseBytes: number) {
+  private dynamicInstSlot(i: number, count: number, poseBytes: number): (typeof this.dynamicInstSlots)[number] | null {
     const need = Math.max(count * DYNAMIC_INSTANCE_FLOATS * 4, 4096);
-    let slot = this.dynamicInstSlots[i];
+    const slot = this.dynamicInstSlots[i];
     const needRigid = Math.max(count * RIGID_INSTANCE_FLOATS * 4, 64);
-    if (slot === undefined || slot.cap < need || slot.poseBuf.size < poseBytes || slot.rigidCap < needRigid) {
-      slot?.buf.destroy();
-      slot?.poseBuf.destroy();
-      slot?.rigidBuf.destroy();
+    if (slot !== undefined && slot.cap >= need && slot.poseBuf.size >= poseBytes && slot.rigidCap >= needRigid) {
+      return slot;
+    }
+    // 事务：pose/实例/rigid/绑定组全部建好后才提交并替换旧 slot。
+    // 任何一步失败只回收本次新建的 buffer；旧的有效 slot 与共享资源不去动。
+    const created: GPUBuffer[] = [];
+    try {
       const poseBuf = this.device.createBuffer({ label: `dynamic-pose-snapshots-${i}`,
         size: Math.max(64, poseBytes, slot?.poseBuf.size ?? 0), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+      created.push(poseBuf);
       const buf = this.device.createBuffer({
         label: `dynamic-instances-${i}`,
         size: Math.max(need, slot?.cap ?? 0),
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
+      created.push(buf);
       // 刚体基向量槽：即使本帧没有刚体批次也要存在（binding 6 必须可绑）。
       const rigidCap = Math.max(count * RIGID_INSTANCE_FLOATS * 4, 64, slot?.rigidCap ?? 0);
       const rigidBuf = this.device.createBuffer({
@@ -1017,6 +1055,7 @@ export class RendererCore {
         size: rigidCap,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
+      created.push(rigidBuf);
       const bg = this.device.createBindGroup({
         label: `dynamic-${i}`,
         layout: this.dynamicLayout,
@@ -1032,10 +1071,19 @@ export class RendererCore {
           { binding: 6, resource: { buffer: rigidBuf } },
         ],
       });
-      slot = { buf, bg, cap: buf.size, poseBuf, rigidBuf, rigidCap };
-      this.dynamicInstSlots[i] = slot;
+      const next = { buf, bg, cap: buf.size, poseBuf, rigidBuf, rigidCap };
+      this.dynamicInstSlots[i] = next;
+      this.dynamicErrors.delete('dynamic-instances-' + i);
+      // 提交成功后才释放被替换的旧 slot。
+      slot?.buf.destroy();
+      slot?.poseBuf.destroy();
+      slot?.rigidBuf.destroy();
+      return next;
+    } catch (e) {
+      for (const b of created) b.destroy();
+      this.recordDynamicFailure('dynamic-instances-' + i, e);
+      return null;
     }
-    return slot;
   }
 
   /**
