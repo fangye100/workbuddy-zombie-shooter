@@ -60,11 +60,11 @@ HTTPS 默认使用本机证书匹配的 `fangye-win11-office.tail6b29a2.ts.net`�
 GLB 及 sidecar、面数明显不同的 H-01 两档，仍验证切换后实际面数；不接管未交接高模。
 导入模型后经编辑命令撤销恢复干净作者状态，不能仅删除 renderer 物体后继续测试保存/改名。
 
-共用启动帮助器改动后，串行运行两个 headed 套件（同一固定 profile 不可并发使用）：
-
 headed 窗口由 `tools/verify/editor-smoke-lib.mjs` 默认固定在 Windows DISPLAY1
 （`--window-position=1920,80`），不覆盖用户在主屏与其他显示器上的工作；需要换屏时
 显式传 `--window-position`。headless 不设置窗口位置。
+
+共用启动帮助器改动后，串行运行两个 headed 套件（同一固定 profile 不可并发使用）：
 
 ```powershell
 node --test tools/verify/editor-smoke-lib.test.mjs

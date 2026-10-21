@@ -18,6 +18,8 @@ test('headed 默认锁定 DISPLAY1 且显式坐标优先，headless 不加窗口
   assert.ok(!override.includes('--window-position=1920,80'));
   const headless=editorSessionFlags({cdpPort:9343,headed:false,appUrl:'https://test/'});
   assert.ok(!headless.some(f=>f.startsWith('--window-position=')));
+  const headlessOverride=editorSessionFlags({cdpPort:9343,headed:false,appUrl:'https://test/',windowPosition:'3840,120'});
+  assert.ok(!headlessOverride.some(f=>f.startsWith('--window-position=')));
 });
 
 const state=()=>({timeOrigin:2,url:'https://test/?scene=fixture',fatal:null,source:{url:'/fixture.scene.json'},pending:0,frames:60,assets:true,preview:true,width:600,height:300});

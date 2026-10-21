@@ -237,7 +237,8 @@ export class Cdp {
 export const DEFAULT_HEADED_WINDOW_POSITION='1920,80';
 
 export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',windowPosition=null,userDataDir='.workbuddy/tmp/chrome-profile',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
-  const effectivePosition=headed?(windowPosition??DEFAULT_HEADED_WINDOW_POSITION):windowPosition;
+  // headless 没有可放置的窗口，显式坐标也不应产出位置 flag。
+  const effectivePosition=headed?(windowPosition??DEFAULT_HEADED_WINDOW_POSITION):null;
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
