@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`c926b543ef0a7502392a55a9d03d5757216bfeee`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`1ca4b38c68a66c59c6163d7e53ccdbe81490103f`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -94,3 +94,17 @@ WU09 联合压力、成本采样与跨设备性能认证未实施；本轮结果
 Editor 核心冒烟的剪贴板失败不属于本次修改路径；实际焦点为 true、readable=true、HUD 符合，读回长度为 0。原 asset-util/AssetBrowser/clipboard-probe/启动授权均未改；未据此调整产品或将失败隐藏。后续复制与未执行项目仍缺本轮整套证明。
 
 部分源文件因 Git safecrlf 要求在提交前仅转换 CRLF→LF；原 GPU JSON 的原始 sourceHashes 保留，`line-ending-receipt.json` 记录转换前后 SHA256。转换后内容与源码提交逐文件一致，未改动业务逻辑。
+
+## 独立 FAIL 后的修复与边界
+
+首轮独立整单审核绑定 `464afeb07a1f1359dc7fbf5cb80b454345d3b821`，结论 FAIL（8 PASS、2 FAIL、2 NOT_VERIFIED）。原报告 SHA256：`03444ad61759ddac8731c7f532c7ca33b2dd5886d511b4b00c642e2208c5337a`，完整原文保存在本目录 `independent-first-fail.json` 的 utf8 字段，可恢复原始字节复核。没有把旧 FAIL 当作完成依据。
+
+F08-01：原 checkRefMeta 只核 GUID/kind，漏掉 source/chunk/convex sidecar 的当前 userData.status。修复统一在原 helper 读取当次 sidecar 后拒绝 quarantined，定位到具体路径；Preview 与 Play 同用此入口。新增三条 owner 测试分别覆盖 source/chunk/独立 convex 引用：先合法通过，再隔离，磁盘和合法未保存草稿都在任何二进制读取前拒绝，恢复后再通过。相关 runtime/preview owner 当前 **50/50**；严格 TLS/真实 GPU 原生准入反例当前 **5/5**（profile/source/chunk 隔离、错误 GUID、恢复），拒绝时 backend=null/0 GPU mesh，恢复后实际绘制。类型、架构与构建通过；原全仓 2258 是修复前有效记录，不冒称含新增三条测试。
+
+F08-03：正式作者探针取消捕获资源前的固定150ms，改为等待当前 owner 的真实 dynamicBatchState=ready，再保留真实对象。修复后的正式完整作者验收 **48/48**，关闭面板抓到实际 mesh/instance/texture，原 destroy/free 及共享资源存活通过。
+
+F08-02：剪贴板两项仍失败，未写成通过。额外最小对照不调用应用 copyText/菜单 handler，直接用 navigator.clipboard.writeText、ClipboardItem.write、原生 execCommand(copy) 和 Ctrl+C；各自写入本轮已知 sentinel 后 readText 均为空，权限granted/焦点true。Windows Get-Clipboard 也为空（仅记录长度及与本轮预期是否相等，不记录其他剪贴板内容）。这将失败定位到当前原生浏览器/系统剪贴板通路，未确定更细成因，不伪称焦点/权限/用户软件问题。原 copyText/AssetBrowser/剪贴板验证和启动授权与批准base相同。没有为消除结果去修改无关产品或全局权限。
+
+为查清被首次中止挡住的原能力，在 ignored 核心探针副本仅捕获剪贴板读回异常为显式失败后继续执行，**125项中123 PASS、2 FAIL、0 SKIP**，exit1；保留原严格判据，没有降为SKIP或整套通过。后续真实改名/取消改名/磁盘200及404、多语言切换等全部通过。本轮旧Inspector/编辑/资源/文件入口的其余实际行为有当前证据；剪贴板正常性仍为上述原生环境边界，交由新整单独立审核评估其对本WU的适用范围。
+
+原失败报告、反例与修复结果全部保留。新exact的全新整单审核另行执行；本节不预先声称独立PASS或supervisor批准。

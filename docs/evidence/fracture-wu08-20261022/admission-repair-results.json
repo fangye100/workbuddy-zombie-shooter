@@ -1,0 +1,171 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu06.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu06.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "cases": [
+      {
+        "mode": "profile",
+        "target": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+        "state": {
+          "locked": false,
+          "resourceLoading": false,
+          "applyingNode": false,
+          "openId": 5,
+          "nodeId": "nd_fr_barrel",
+          "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+          "hasDraft": false,
+          "sceneDirty": false,
+          "assetDirty": false,
+          "preview": {
+            "ready": false,
+            "paused": true,
+            "triggered": false,
+            "sourceVisible": false,
+            "takingOver": false,
+            "tick": 0,
+            "owner": "fracture-preview-5",
+            "diagnostic": "Error: quarantined：assets/fracture/p01-barrel/p01-barrel.fracture.json 当前profile/sidecar被隔离",
+            "event": null,
+            "active": 0,
+            "stats": null,
+            "batches": []
+          },
+          "diagnostic": "Error: quarantined：assets/fracture/p01-barrel/p01-barrel.fracture.json 当前profile/sidecar被隔离"
+        },
+        "hits": 1,
+        "backend": null,
+        "meshIds": []
+      },
+      {
+        "mode": "source",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "state": {
+          "locked": false,
+          "resourceLoading": false,
+          "applyingNode": false,
+          "openId": 6,
+          "nodeId": "nd_fr_barrel",
+          "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+          "hasDraft": false,
+          "sceneDirty": false,
+          "assetDirty": false,
+          "preview": {
+            "ready": false,
+            "paused": true,
+            "triggered": false,
+            "sourceVisible": false,
+            "takingOver": false,
+            "tick": 0,
+            "owner": "fracture-preview-8",
+            "diagnostic": "Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+            "event": null,
+            "active": 0,
+            "stats": null,
+            "batches": []
+          },
+          "diagnostic": "Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）"
+        },
+        "hits": 1,
+        "backend": null,
+        "meshIds": []
+      },
+      {
+        "mode": "chunk",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "state": {
+          "locked": false,
+          "resourceLoading": false,
+          "applyingNode": false,
+          "openId": 7,
+          "nodeId": "nd_fr_barrel",
+          "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+          "hasDraft": false,
+          "sceneDirty": false,
+          "assetDirty": false,
+          "preview": {
+            "ready": false,
+            "paused": true,
+            "triggered": false,
+            "sourceVisible": false,
+            "takingOver": false,
+            "tick": 0,
+            "owner": "fracture-preview-11",
+            "diagnostic": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）",
+            "event": null,
+            "active": 0,
+            "stats": null,
+            "batches": []
+          },
+          "diagnostic": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）"
+        },
+        "hits": 1,
+        "backend": null,
+        "meshIds": []
+      }
+    ],
+    "final": {
+      "locked": false,
+      "resourceLoading": false,
+      "applyingNode": false,
+      "openId": 8,
+      "nodeId": "nd_fr_barrel",
+      "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+      "hasDraft": false,
+      "sceneDirty": false,
+      "assetDirty": false,
+      "preview": {
+        "ready": false,
+        "paused": true,
+        "triggered": false,
+        "sourceVisible": false,
+        "takingOver": false,
+        "tick": 0,
+        "owner": "fracture-preview-14",
+        "diagnostic": "",
+        "event": null,
+        "active": 0,
+        "stats": null,
+        "batches": []
+      },
+      "diagnostic": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）"
+    }
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "当前profile sidecar被隔离时在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"active\":0,\"backend\":null,\"meshes\":0,\"diagnostic\":\"Error: quarantined：assets/fracture/p01-barrel/p01-barrel.fracture.json 当前profile/sidecar被隔离\"}"
+    },
+    {
+      "name": "当前source sidecar被隔离时在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"active\":0,\"backend\":null,\"meshes\":0,\"diagnostic\":\"Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）\"}"
+    },
+    {
+      "name": "当前chunk sidecar被隔离时在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"active\":0,\"backend\":null,\"meshes\":0,\"diagnostic\":\"Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）\"}"
+    },
+    {
+      "name": "撤销精确IO故障后新代可实际绘制",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

@@ -1,0 +1,32 @@
+{
+  "scope": "unchanged native relative/absolute copy menu, read-only existing formal asset",
+  "cases": [
+    {
+      "mode": "relative",
+      "ok": false,
+      "error": "剪贴板读回超时：{\"hud\":\"已复制相对路径：assets/fracture/p01-barrel/p01-barrel.fracture.json\",\"hudMatches\":true,\"focused\":true,\"readable\":true,\"matches\":false,\"length\":0,\"error\":null}"
+    },
+    {
+      "mode": "absolute",
+      "ok": false,
+      "error": "剪贴板读回超时：{\"hud\":\"已复制绝对路径：C:\\\\Users\\\\fangy\\\\WorkBuddy\\\\game-design-zombie\\\\assets\\\\fracture\\\\p01-barrel\\\\p01-barrel.fracture.json\",\"hudMatches\":true,\"focused\":true,\"readable\":true,\"matches\":false,\"length\":0,\"error\":null}"
+    }
+  ],
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "direct": {
+    "matches": false,
+    "length": 0,
+    "permission": "granted",
+    "focused": true
+  },
+  "consoleErrors": [],
+  "exceptions": []
+}

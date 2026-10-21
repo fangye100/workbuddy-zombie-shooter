@@ -1,0 +1,49 @@
+{
+  "scope": "unchanged native relative/absolute copy menu, read-only existing formal asset",
+  "cases": [
+    {
+      "method": "item",
+      "writeResult": true,
+      "read": {
+        "matches": false,
+        "length": 0,
+        "focused": true
+      }
+    },
+    {
+      "method": "execCommand",
+      "writeResult": true,
+      "read": {
+        "matches": false,
+        "length": 0,
+        "focused": true
+      }
+    },
+    {
+      "method": "keyboard",
+      "writeResult": true,
+      "read": {
+        "matches": false,
+        "length": 0,
+        "focused": true
+      }
+    }
+  ],
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "direct": {
+    "matches": false,
+    "length": 0,
+    "permission": "granted",
+    "focused": true
+  },
+  "consoleErrors": [],
+  "exceptions": []
+}
