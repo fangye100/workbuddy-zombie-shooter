@@ -2,8 +2,8 @@ import { smallCampaignFixture } from './campaign-fixture';
 import { describe, it, expect } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
-import type { SceneDocument } from '@aether/scene';
-import { solidCollider } from '@aether/runtime';
+import type { SceneDocument, WeaponDefinition } from '@aether/scene';
+import { WeaponCombat, solidCollider, type WeaponWorld, type WeaponActor } from '@aether/runtime';
 import type { LevelRuntimeDesc, NavDesc, DestructibleDesc } from '../src/loader';
 
 /** 最小合成运行描述：一块空导航区，可选障碍。输入链路测试用它，不碰真实关卡 */
@@ -610,10 +610,23 @@ describe('RuntimeSession —— W06 正式可破坏庭院', () => {
     expect(s.collisionSnapshot().solids).not.toContain('nd_w6_wall_l');
     expect(s.collisionSnapshot().dynamicObstacles).not.toContain('nd_fr_barrel');
 
-    // 真实射线对隐藏节点返回 miss（ barrel 在 [0,0.5,0] 附近，从 [-2,0.5,0] 向 +X 发射）
-    // 通过 weaponWorld 的 trace 验证（需要构造一个最小的 WeaponWorld 调用环境）
-    // 由于 weaponWorld 是 private，这里通过 collisionSnapshot 和 damageSceneObject 验证：
-    // 对隐藏节点调用 damageSceneObject 返回 0（找不到目标）
+    // 真实射线：对照组（未隐藏）同一射线能命中 barrel / wall_l，证明射线本身可检测；
+    // 隐藏后同一射线对这两个节点 miss。weaponWorld 是 private，用结构化 cast 取真实实例。
+    const ctlDoc = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    const ctlR = loadLevelRuntime(ctlDoc);
+    const ctl = new RuntimeSession({ desc: ctlR.desc!, seed: 4 });
+    const ctlWorld = (ctl as unknown as { weaponWorld(): WeaponWorld }).weaponWorld();
+    // nd_fr_barrel 世界盒 x/z∈[-0.6,0.6]（节点 scale=2），从 [0,0.9,-2] 沿 +Z 射；
+    // 水平 -X 方向不能用：起点会落在 wall_l（x∈[-6,-1]）内部。
+    expect(ctlWorld.trace([0, 0.9, -2], [0, 0, 1], 3, new Set<number>()).nodeId).toBe('nd_fr_barrel');
+    // nd_w6_wall_l 顶面 y=2，从 [-3.5,4,0] 垂直下射 3m（地面在 4m 处，出界）
+    expect(ctlWorld.trace([-3.5, 4, 0], [0, -1, 0], 3, new Set<number>()).nodeId).toBe('nd_w6_wall_l');
+
+    const hiddenWorld = (s as unknown as { weaponWorld(): WeaponWorld }).weaponWorld();
+    expect(hiddenWorld.trace([0, 0.9, -2], [0, 0, 1], 3, new Set<number>()).kind).toBe('miss');
+    expect(hiddenWorld.trace([-3.5, 4, 0], [0, -1, 0], 3, new Set<number>()).kind).toBe('miss');
+
+    // 隐藏节点不可被伤害（找不到目标）
     expect(s.damageSceneObject('nd_fr_barrel', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
     expect(s.damageSceneObject('nd_w6_wall_l', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
 
@@ -629,6 +642,9 @@ describe('RuntimeSession —— W06 正式可破坏庭院', () => {
     expect(s2.collisionSnapshot().solids).toContain('nd_fr_barrel');
     expect(s2.collisionSnapshot().dynamicObstacles).not.toContain('nd_fr_barrel');
     expect(s2.damageSceneObject('nd_fr_barrel', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
+    // 禁用 Destructible 但可见 Collider 仍被真实射线命中（普通静态碰撞语义）
+    const disWorld = (s2 as unknown as { weaponWorld(): WeaponWorld }).weaponWorld();
+    expect(disWorld.trace([0, 0.9, -2], [0, 0, 1], 3, new Set<number>()).nodeId).toBe('nd_fr_barrel');
   });
 
   it('表面导航成立，三个可破坏对象在 Play 副本中可单独破坏', () => {
@@ -672,51 +688,63 @@ describe('RuntimeSession —— W06 正式可破坏庭院', () => {
     expect(ev.source.hitSequence).toBe(12);
   });
 
-  it('爆炸 AABB 边界：爆心距离 <R、=R、>R 分别对应全伤、全伤、无伤', () => {
-    // 爆心固定在 [0, 0.5, 0]，爆炸半径 3
-    // 目标 AABB 的最近点距离爆心：nd_in=2.9（<3）、nd_edge=3.0（=3）、nd_out=3.25（>3）
+  it('爆炸 AABB 边界经真实武器链作用到耐久：<R、=R 受伤，>R 两轮都无伤', () => {
+    // 爆心 [0,0.9,0]（合成 actor 位于原点、射击起点 y=0.9），爆炸半径 R=3。
+    // 目标 AABB 最近点到爆心的距离：nd_in=2.9（<R）、nd_edge=3.0（=R）、nd_out=3.25（>R）。
     const layout = bareDesc();
-    const mkBox = (nodeId: string, cx: number, halfX: number, minY: number, maxY: number) => {
-      const world = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, cx,(minY+maxY)/2,0,1]);
+    const mkBox = (nodeId: string, cx: number, cz: number, halfX: number, halfZ: number) => {
+      const world = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, cx,0.95,cz,1]);
       return {
         nodeId, name: nodeId,
         profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
         maxDurability: 20,
         trigger: { direct: true, explosion: true, burn: false },
         onBroken: { collider: 'remove' as const, navigation: 'clear-blocking' as const },
-        world, position: [cx, (minY + maxY) / 2, 0] as [number, number, number],
+        world, position: [cx, 0.95, cz] as [number, number, number],
         rotation: [0, 0, 0, 1] as [number, number, number, number],
         scale: [1, 1, 1] as [number, number, number],
-        bounds: { x: cx, z: 0, halfX, halfZ: 0.5, radius: Math.max(halfX, 0.5), minY, maxY },
-        solid: solidCollider(nodeId, { type: 'box' as const, halfExtents: [halfX, (maxY - minY) / 2, 0.5] }, world),
+        bounds: { x: cx, z: cz, halfX, halfZ, radius: Math.max(halfX, halfZ), minY: 0, maxY: 1.9 },
+        solid: solidCollider(nodeId, { type: 'box' as const, halfExtents: [halfX, 0.95, halfZ] }, world),
         obstacle: null,
       };
     };
     layout.destructibles = [
-      mkBox('nd_in',   3.15, 0.25, 0, 1),  // AABB minX=2.90, 最近点 [2.90,0.5,0], dist=2.90 < 3
-      mkBox('nd_edge', 3.25, 0.25, 0, 1),  // AABB minX=3.00, 最近点 [3.00,0.5,0], dist=3.00 = 3
-      mkBox('nd_out',  3.75, 0.25, 0, 1),  // AABB minX=3.25, 最近点 [3.25,0.5,0], dist=3.25 > 3
+      mkBox('nd_in',   0,  3.15, 0.25, 0.25),  // AABB z∈[2.90,3.40], 最近点 [0,0.9,2.90], dist=2.90 < 3
+      mkBox('nd_edge', 0, -3.20, 0.25, 0.20),  // AABB z∈[-3.40,-3.00], 最近点 [0,0.9,-3.00], dist=3.00 = 3
+      mkBox('nd_out',  3.50, 0, 0.25, 0.25),   // AABB x∈[3.25,3.75], 最近点 [3.25,0.9,0], dist=3.25 > 3
     ];
     const s = new RuntimeSession({ desc: layout, seed: 9 });
-    // 直接调用 damageSceneObject 模拟爆炸伤害（与 WeaponCombat.explode 内部调用一致）
-    // 这里验证的是：当 WeaponCombat 判定目标在爆炸范围内时，RuntimeSession 正确扣减耐久
-    expect(s.damageSceneObject('nd_in',   10, { weaponId: 'w_rpg', vfxSequence: 1 }, 'explosion')).toBe(10);
-    expect(s.damageSceneObject('nd_edge', 10, { weaponId: 'w_rpg', vfxSequence: 2 }, 'explosion')).toBe(10);
-    expect(s.damageSceneObject('nd_out',  10, { weaponId: 'w_rpg', vfxSequence: 3 }, 'explosion')).toBe(10);
+    // 真实 weaponWorld：sceneTargets（含 AABB）/blockedExcept（liveSolids）/damageScene（→耐久）
+    // 全部走会话真实实现；只有 trace 用合成 actor 命中触发 explode（bareDesc 没有 NPC 可打）。
+    // 合成 actor 位于原点 → 爆心 [actor.x, origin[1], actor.z] = [0, 0.9, 0]。
+    const world = (s as unknown as { weaponWorld(): WeaponWorld }).weaponWorld();
+    const victim: WeaponActor = { id: 999999, generation: 1, x: 0, y: 0, height: 1.8, z: 0, radius: 0.3, hp: 100 };
+    const aimed: WeaponWorld = {
+      ...world,
+      trace: () => ({ actor: victim, distance: 4, point: [4, 0.9, 0], kind: 'entity' as const, normal: [-1, 0, 0] }),
+    };
+    const blast: WeaponDefinition = {
+      id: 'w_test_blast', behavior: 'hitscan', damage: 20, rangeM: 20, spreadDeg: 0, pellets: 1, penetration: 1,
+      effects: { blastRadiusM: 3, knockbackM: 0, burnSec: 0, burnDps: 0, slowSec: 0, slowFrac: 0 },
+      presentation: { color: '#ffffff', markers: { muzzle: { position: [0, 0, 0] } } },
+      projectile: { lifetimeSec: 1, radiusM: 0.1, speedMps: 10, launchSpeedY: 0, gravity: 0 },
+    } as unknown as WeaponDefinition;
+    new WeaponCombat(7).fire(blast, [0, 0.9, 0], [1, 0, 0], 20, 3, aimed);
     expect(s.destructibleSnapshot()).toEqual([
       { nodeId: 'nd_in',   hp: 10, broken: false },
       { nodeId: 'nd_edge', hp: 10, broken: false },
-      { nodeId: 'nd_out',  hp: 10, broken: false },
+      { nodeId: 'nd_out',  hp: 20, broken: false },  // >R：第一轮无伤
     ]);
-    // 再补一刀击破，验证事件顺序与剩余耐久
-    expect(s.damageSceneObject('nd_in',   10, { weaponId: 'w_rpg', vfxSequence: 4 }, 'explosion')).toBe(10);
-    expect(s.damageSceneObject('nd_edge', 10, { weaponId: 'w_rpg', vfxSequence: 5 }, 'explosion')).toBe(10);
-    expect(s.damageSceneObject('nd_out',  10, { weaponId: 'w_rpg', vfxSequence: 6 }, 'explosion')).toBe(10);
+    expect(s.takeDestructibleEvents()).toEqual([]);
+    // 第二轮爆炸：边界内目标归零破坏并发事件，>R 目标仍无伤
+    new WeaponCombat(7).fire(blast, [0, 0.9, 0], [1, 0, 0], 20, 3, aimed);
     expect(s.destructibleSnapshot()).toEqual([
       { nodeId: 'nd_in',   hp: 0, broken: true },
       { nodeId: 'nd_edge', hp: 0, broken: true },
-      { nodeId: 'nd_out',  hp: 0, broken: true },
+      { nodeId: 'nd_out',  hp: 20, broken: false },  // >R：两轮都无伤
     ]);
-    expect(s.takeDestructibleEvents()).toHaveLength(3);
+    const events = s.takeDestructibleEvents();
+    expect(events).toHaveLength(2);
+    expect(events.map((e) => (e.target as { nodeId: string }).nodeId).sort()).toEqual(['nd_edge', 'nd_in']);
   });
 });
