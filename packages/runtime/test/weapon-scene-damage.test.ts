@@ -51,6 +51,8 @@ describe('WU-06 武器事实链 → 场景可破坏目标', () => {
         { nodeId: 'nd_near', position: [1, 0.5, 0], radius: 0.4 },
         { nodeId: 'nd_behind_wall', position: [2, 0.5, 0], radius: 0.4 },
         { nodeId: 'nd_far', position: [6, 0.5, 0], radius: 0.4 },
+        { nodeId: 'nd_grazing', position: [3.75, 1, 0], radius: 0.5,
+          minX: 3.25, maxX: 4.25, minY: 0.5, maxY: 1.5, minZ: -0.5, maxZ: 0.5 },
       ],
       blockedExcept: (_from, _to, nodeId) => nodeId === 'nd_behind_wall',
     });
@@ -96,5 +98,21 @@ describe('WU-06 武器事实链 → 场景可破坏目标', () => {
     new WeaponCombat(7).fire(weapon({ behavior: 'flame', rangeM: 5, damage: 6 }),
       [0, 1, 0], [1, 0, 0], 6, 3, behind.world);
     expect(behind.sceneHits).toEqual([]);
+  });
+
+  it('AABB 最近距离严格按半径边界（<、=、>）判定，不重复扩张目标尺寸', () => {
+    const actor: WeaponActor = { id: 1, generation: 1, x: 0, y: 0, height: 1.8, z: 0, radius: 0.3, hp: 100 };
+    const { world, sceneHits } = sceneWorld({
+      traceActor: actor,
+      targets: [
+        { nodeId: 'nd_in', position: [3.15, 0.5, 0], radius: 0.5, minX: 2.9, maxX: 3.4, minY: 0, maxY: 1, minZ: -0.5, maxZ: 0.5 },
+        { nodeId: 'nd_edge', position: [3.25, 0.5, 0], radius: 0.5, minX: 3.0, maxX: 3.5, minY: 0, maxY: 1, minZ: -0.5, maxZ: 0.5 },
+        { nodeId: 'nd_out', position: [3.75, 0.5, 0], radius: 0.5, minX: 3.25, maxX: 4.25, minY: 0, maxY: 1, minZ: -0.5, maxZ: 0.5 },
+      ],
+      blockedExcept: () => false,
+    });
+    new WeaponCombat(7).fire(weapon({ effects: { blastRadiusM: 3, knockbackM: 0, burnSec: 0, burnDps: 0, slowSec: 0, slowFrac: 0 } }),
+      [0, 0.5, 0], [1, 0, 0], 20, 3, world);
+    expect(sceneHits.map((h) => h.nodeId)).toEqual(['nd_in', 'nd_edge']);
   });
 });

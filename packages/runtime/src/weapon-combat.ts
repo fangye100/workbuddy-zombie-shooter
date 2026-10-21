@@ -175,7 +175,9 @@ export class WeaponCombat {
         clamp(point[2],s.minZ??s.position[2],s.maxZ??s.position[2]),
       ];
       const distance=Math.hypot(closest[0]-point[0],closest[1]-point[1],closest[2]-point[2]);
-      if(distance>w.effects.blastRadiusM+s.radius)continue;
+      // 有 AABB 时 closest 已在目标表面，不能再加一次 radius；无 bounds 才用中心+半径。
+      const hasBounds=s.minX!==undefined||s.maxX!==undefined||s.minY!==undefined||s.maxY!==undefined||s.minZ!==undefined||s.maxZ!==undefined;
+      if(distance>w.effects.blastRadiusM+(hasBounds?0:s.radius))continue;
       const blocked=world.blockedExcept?.(point,closest,s.nodeId) ?? world.blocked(point,closest);
       if(blocked)continue;
       const seq=this.sceneImpact(w,point,s,tick,closest);

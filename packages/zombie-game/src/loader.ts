@@ -450,6 +450,8 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       } else if (c.kind === 'Collider') {
         const col = c as ColliderComponent;
         if (col.isTrigger) continue; // 触发器不挡路
+        // 隐藏节点（含隐藏父级）不是运行期碰撞/导航真源：与射线/门/三地表同一可见性口径。
+        if (!graph.isEffectivelyVisible(n.id)) continue;
         const gate=n.components.find(other=>other.kind==='NavigationGate'&&other.enabled);
         if(gate?.kind==='NavigationGate'&&col.enabled&&graph.isEffectivelyVisible(n.id)){
           const m=graph.worldMatrix(n.id),a=colliderWorldAabb(graph,n.id,col.shape),v=gate.openOffset;
@@ -555,6 +557,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
 
   // ---------------------------------------------------------- 可破坏对象
   for (const [nodeId, dtor] of destructibleByNode) {
+    if (!graph.isEffectivelyVisible(nodeId)) continue;
     const node = graph.getNode(nodeId);
     if (node === null) { err('E_DESTRUCTIBLE_NODE', '可破坏组件指向不存在的节点', nodeId); continue; }
     const col = node.components.find((c) => c.kind === 'Collider' && c.enabled && !c.isTrigger) as ColliderComponent | undefined;

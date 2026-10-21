@@ -262,6 +262,45 @@ async function main() {
     await cdp.eval('window.__editor.playCtl.reset()');
     await sleep(600);
 
+    // 迟到失败回调：先消费启动异步读取，再立即 Reset；旧 binding 的拒绝不能写新会话诊断。
+    await cdp.eval("document.querySelector('#btn-pause').click()");
+    await sleep(120);
+    await cdp.eval('window.__editor.playCtl.reset()');
+    await sleep(400);
+    await cdp.eval("document.querySelector('#btn-pause').click()");
+    await sleep(100);
+    await cdp.eval("(()=>{const fr=window.__editor.playCtl.fractureIO;fr.readText=async()=>{throw new Error('probe-late-profile')};fr.readBinary=async()=>{throw new Error('probe-late-profile')};})()");
+    await cdp.eval("(()=>{const e=window.__editor,c=e.playCtl;c.session.runtime.damageSceneObject('nd_fr_barrel',40,{weaponId:'w'},'direct');c.update(0);c.reset();})()");
+    await sleep(1800);
+    const lateFailure = await cdp.eval("(()=>{const e=window.__editor,c=e.playCtl,r=c.session.runtime;return {error:c.destructibleError,snap:r.destructibleSnapshot(),batches:c.fractureBatches.length,broken:[...c.brokenNodes]};})()");
+    details.lateFailure = lateFailure;
+    check('Reset 后旧代失败回调不写新会话诊断', lateFailure.error===null && lateFailure.snap.find(x=>x.nodeId==='nd_fr_barrel').hp===40 && lateFailure.batches===0 && lateFailure.broken.length===0, JSON.stringify(lateFailure));
+
+    // Stop 后旧 IO 失败：绑定已断，迟到拒绝不得写 stopped 会话或新 Play 诊断。
+    await cdp.eval("(()=>{const fr=window.__editor.playCtl.fractureIO;window.__origReadText=fr.readText.bind(fr);window.__origReadBinary=fr.readBinary.bind(fr);fr.readText=()=>new Promise((_,rej)=>{window.__lateStopReject=rej});fr.readBinary=()=>new Promise((_,rej)=>{window.__lateStopReject=rej});})()");
+    await cdp.eval("window.__editor.playCtl.session.runtime.damageSceneObject('nd_w6_barrel_c',40,{weaponId:'w'},'direct')");
+    await cdp.eval('window.__editor.playCtl.update(0)');
+    await cdp.eval("document.querySelector('#btn-stop').click()");
+    await sleep(150);
+    await cdp.eval("window.__lateStopReject(new Error('probe-stop-late-io'))");
+    await sleep(1200);
+    const stopLate = await cdp.eval("(()=>{const e=window.__editor,c=e.playCtl;return {playing:c.isPlaying,error:c.destructibleError,batches:c.fractureBatches.length};})()");
+    details.stopLate = stopLate;
+    check('Stop 后旧 IO 失败不写当前诊断', !stopLate.playing && stopLate.error===null && stopLate.batches===0, JSON.stringify(stopLate));
+
+    // 新 Play 必须不受旧失败影响，并能正常开始。
+    await cdp.eval("(()=>{const fr=window.__editor.playCtl.fractureIO;fr.readText=window.__origReadText;fr.readBinary=window.__origReadBinary;})()");
+    await cdp.eval("document.querySelector('#btn-play').click()");
+    await sleep(1200);
+    const newPlay = await cdp.eval("(()=>{const c=window.__editor.playCtl;const r=c.session.runtime;return {playing:c.isPlaying,error:c.destructibleError,snap:r?r.destructibleSnapshot():null};})()");
+    details.newPlay = newPlay;
+    check('Stop 旧失败后新 Play 诊断干净且目标 intact', newPlay.playing && newPlay.error===null && !!newPlay.snap && newPlay.snap.every(x=>x.hp===40&&!x.broken), JSON.stringify(newPlay));
+    await cdp.eval("document.querySelector('#btn-stop').click()");
+    await sleep(300);
+    // 重新进入一次，供后续坏 profile 测试使用。
+    await cdp.eval("document.querySelector('#btn-play').click()");
+    await sleep(800);
+
     // 表现失败保底：游戏事实仍成立，诊断可见，不留下不可见完整 collider。
     await cdp.eval("document.querySelector('#btn-pause').click()");
     await sleep(120);

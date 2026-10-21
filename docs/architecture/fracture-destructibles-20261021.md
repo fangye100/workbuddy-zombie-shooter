@@ -31,7 +31,8 @@
   `sceneTargets()`、`damageScene(nodeId,damage,facts,kind,point?,normal?)`、
   `blockedExcept(from,to,ignoreNodeId)`。
 - hitscan/pellets/piercing 在真实 `trace` 命中场景 collider 后以 `direct` 来源扣耐久；
-  projectile 以 `projectile`；爆炸沿真实爆心/距离/`blockedExcept` 遮挡查询；
+  projectile 以 `projectile`；爆炸用目标 AABB 最近点的真实距离与 `blockedExcept` 遮挡
+  （最近点已在表面，不再重复加目标半径；<、=、> 边界与隐藏节点均有 owner 测试）。
   flame 以 `burn` 来源，范围目标用 `blockedExcept` 忽略自身 collider，命中后按
   `burnSec/burnDps` 进入场景 DOT（仍由 `trigger.burn` 明确门控）。散弹同 tick 多弹丸可多次
   提交，但会话只允许一次 broken 转换。
@@ -39,11 +40,12 @@
   转换完成后生成不可变 `FractureEvent`（runId + 稳定 NodeId + 世界 TRS + contact/normal +
   weaponId/hitSequence），经 `frozenFractureEvent` 冻结后发布给表现层；`hitSequence` 使用
   武器 trace/projectile/explosion 的 VFX 序号，normal/impulse 沿命中/爆心方向生成。
-  表现失败不回滚该事实。
+  表现失败不回滚该事实；Reset/Stop 换代后迟到的失败回调按 binding 身份丢弃，不写新会话诊断。
 
 ## 碰撞、导航与生命周期
 
-- 装载期：`onBroken.collider='remove'` 的目标不进静态 `shotColliders`，由会话在 intact
+- 装载期：可见性（含隐藏父级）与射线/门/三地表同口径；隐藏节点的 collider 不进入射线、
+  基础导航或可破坏目标。`onBroken.collider='remove'` 的目标不进静态 `shotColliders`，由会话在 intact
   期间持有所属 `SolidColliderDesc`；`navigation='clear-blocking'` 的目标在三维地表场景
   不进基础 obstacles，作为动态障碍随状态加入/移除。平面导航不支持动态移除，
   装载期给 `W_DESTRUCTIBLE_NAV_STATIC` 提示并保留静态障碍。
@@ -56,7 +58,7 @@
 ## 验收证据（headed，DISPLAY1 1920,80，严格 TLS）
 
 `node tools/verify/wu06-destructible-probe.mjs --headed --scene assets/scenes/sandbox/fracture-wu06.scene.json`
-本轮 **40 PASS / 0 FAIL / 0 SKIP**，nvidia/lovelace、secure=true、fallback=false：
+本轮 **43 PASS / 0 FAIL / 0 SKIP**，nvidia/lovelace、secure=true、fallback=false：
 
 - 初始 3 个目标 hp=40 intact；目标同时参与射线与动态导航；对照箱/墙体保持静态。
 - 原生数字键 1 + 鼠标瞄准 + J：真实手枪击碎 A；collider 与动态障碍移除、完整显示隐藏、
@@ -68,7 +70,8 @@
 - Reset 后旧代破坏表现不作用新 run；注入 profile 读取失败时玩法事实仍为 broken、
   collider 已移除、完整对象隐藏，`destructibleError` 给出
   `profile-read — profile 读取失败`；后端未就绪时同样先隐藏/移除镜像并给出
-  “等待重试”，恢复后同一事实重试成功（24 批）；Stop ledger 15/15、pending=0，作者文档与静态件恢复。
+  “等待重试”，恢复后同一事实重试成功（24 批）；Reset 与 Stop 后旧 IO 失败均不污染当前/新 Play 诊断；
+  Stop ledger 31/31、pending=0，作者文档与静态件恢复。
 - 原始结果：`.workbuddy/tmp/wu06-final/wu06-destructible-results.json` 与截图
   `direct-broken.png`、`explosion.png`。
 

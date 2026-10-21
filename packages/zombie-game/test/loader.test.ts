@@ -455,4 +455,52 @@ describe('loadLevelRuntime —— W06 可破坏庭院', () => {
     expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_wall_r')).toBe(true);
     expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_control')).toBe(true);
   });
+
+
+  it('隐藏节点与隐藏父级不进入运行期射线/导航/可破坏目标', () => {
+    const key = Object.keys(W6)[0]!;
+    const doc = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    const barrel = doc.nodes.find((n) => n.id === 'nd_fr_barrel')!;
+    barrel.visible = false;
+    const wall = doc.nodes.find((n) => n.id === 'nd_w6_wall_l')!;
+    wall.visible = false;
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const d = r.desc!;
+    expect(d.destructibles.map((x) => x.nodeId)).not.toContain('nd_fr_barrel');
+    expect(d.shotColliders.some((s) => s.nodeId === 'nd_fr_barrel')).toBe(false);
+    expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_wall_l')).toBe(false);
+    expect(d.obstacles.some((o) => o.nodeId === 'nd_fr_barrel')).toBe(false);
+    expect(d.obstacles.some((o) => o.nodeId === 'nd_w6_wall_l')).toBe(false);
+  });
+
+
+  it('隐藏父级与禁用 Destructible 按有效可见性/启用语义处理', () => {
+    const key = Object.keys(W6)[0]!;
+    const doc = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    const barrel = doc.nodes.find((n) => n.id === 'nd_fr_barrel')!;
+    const parent = {
+      id: 'nd_hidden_parent', name: 'hidden parent', parent: null,
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      visible: false, pickable: false, prefab: null, components: [],
+    };
+    (doc.nodes as unknown as Array<typeof parent>).push(parent);
+    barrel.parent = parent.id;
+    const hidden = loadLevelRuntime(doc);
+    expect(hidden.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(hidden.desc!.destructibles.some((x) => x.nodeId === 'nd_fr_barrel')).toBe(false);
+    expect(hidden.desc!.shotColliders.some((s) => s.nodeId === 'nd_fr_barrel')).toBe(false);
+    expect(hidden.desc!.obstacles.some((o) => o.nodeId === 'nd_fr_barrel')).toBe(false);
+
+    const doc2 = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    const barrel2 = doc2.nodes.find((n) => n.id === 'nd_fr_barrel')!;
+    const dtor = barrel2.components.find((c) => c.kind === 'Destructible')! as { enabled: boolean };
+    dtor.enabled = false;
+    const disabled = loadLevelRuntime(doc2);
+    expect(disabled.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(disabled.desc!.destructibles.some((x) => x.nodeId === 'nd_fr_barrel')).toBe(false);
+    // 禁用 Destructible 只是不再参与破坏，其可见 Collider 仍是普通静态碰撞。
+    expect(disabled.desc!.shotColliders.some((s) => s.nodeId === 'nd_fr_barrel')).toBe(true);
+    expect(disabled.desc!.obstacles.some((o) => o.nodeId === 'nd_fr_barrel')).toBe(true);
+  });
 });

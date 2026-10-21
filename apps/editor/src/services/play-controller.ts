@@ -353,6 +353,7 @@ export class PlayController {
         if (binding !== null && this.readyRetryBinding !== binding) {
           this.readyRetryBinding = binding;
           void binding.ready.then(() => {
+            if (this.fractureBinding !== binding) return;
             this.brokenMirrorsDirty = true;
             this.consumeDestructibleEvents();
           });
@@ -366,6 +367,8 @@ export class PlayController {
       }
       this.syncBrokenMirrors();
       void this.spawnFracture(ev).then((r) => {
+        // Reset/Stop 换代后，旧 binding 的迟到失败不能写回新会话诊断。
+        if (this.fractureBinding !== binding) return;
         if (!r.accepted) {
           const rej = r.rejection;
           // Reset/Stop 造成的旧代取消是预期取消，不是用户可见的破坏表现失败。
