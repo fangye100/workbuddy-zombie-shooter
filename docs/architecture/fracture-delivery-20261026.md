@@ -1,7 +1,7 @@
 # 碎裂系统联合运行、成本与交付边界（WU-09）
 
 日期：2026-10-26，Asia/Singapore。批准 base：`9478b6034f021b751ef8e70daf5b34c7411f88bf`。
-本轮生产修复为 `3712383e63a71e969ebe30062bfc3446f64daa0c`，验证工具源码为 `e06306c`（完整 SHA 见冻结清单）。
+本轮生产修复为 `3712383e63a71e969ebe30062bfc3446f64daa0c`，验证工具源码为 `61c038acd2b59274d898cd47aba81a0eb86a9bcd`（完整 SHA 见冻结清单）。
 本文记录开发自验和运行方法；完整独立 WU_ACCEPTANCE 与 supervisor 对最终 exact SHA 的 APPROVED 是后续放行条件，不由本文代替。
 
 ## 从现有编辑器开始
@@ -70,9 +70,9 @@ CPU submission 是 `core.drawFrame` 的同步编码墙钟；Play Step 还包含�
 
 | 模式 | 真/简化活动数 | GPU区间中位/p95/峰值 ms | CPU提交中位/p95/峰值 ms | 真物理中位/p95/峰值 ms | 实际碎片writeBuffer字节/帧 |
 |---|---|---|---|---|---|
-| off | 0/0 | 0.417/0.987/0.999 | 0.300/0.400/0.700 | 0.100/0.200/0.900 | 0 |
-| simplified | 0/22 | 0.580/1.038/1.083 | 0.600/1.400/1.600 | 0.100/0.200/0.700 | 5632 |
-| rigid | 15/7 | 0.761/1.460/1.529 | 1.100/1.800/2.200 | 0.500/1.200/2.500 | 5632 |
+| off | 0/0 | 0.347/1.229/1.240 | 0.200/0.300/0.400 | 0.100/0.200/0.500 | 0 |
+| simplified | 0/22 | 0.945/1.425/1.474 | 0.500/0.600/0.600 | 0.100/0.200/0.200 | 5632 |
+| rigid | 15/7 | 0.725/1.774/2.202 | 0.500/0.900/0.900 | 0.300/0.700/1.400 | 5632 |
 
 draw/三角形来自实际 drawIndexed 调用，包含描边的再次绘制；22块产生44个材质子批、88次碎片 indexed draw、85,932个含描边三角形提交。
 唯一几何与材质批数另列，不能把提交三角形数称作模型独立面数。
@@ -82,10 +82,16 @@ draw/三角形来自实际 drawIndexed 调用，包含描边的再次绘制；22
 默认32真实/256简化/256事件队列只是当前配置，本机已测至该预算，非任意设备认证。
 压力使用32次12块的 P-01 事件，延长 TTL 为60秒；活动达到32+256，显式跳块，低优先级满额输入不删除已有句柄。
 队列第257条拒绝，后续有界消费。压力不是原生武器主路径，也不占投射物额度。
+满预算另取24个原始帧（不额外丢弃暖机）：24材质批、48次碎片draw、1,783,116个含描边三角形提交，实际实例写入73,728字节/帧。
+GPU全区间中位/p95/峰值为2.529/3.222/3.291ms，CPU提交为0.300/0.400/0.500ms，Play Step为1.900/2.400/2.600ms。
+该Play内曾被碎片消费且仍存活的168个buffer合计5,953,440字节；两张4096² RGBA8的完整mip逻辑字节为178,956,968。
+休眠后这些分配仍在；这包括上一模式可复用的槽/贴图，既不等于当前可见块独占量，也不是驱动物理显存值。
 长时休眠/TTL 直接推进原 binding.onFixedTick 并调用原同步，隔离玩家死亡；不借它证明宿主接线，宿主由原生23/43项验证。
 
 最终压力记录的32真刚体均进入休眠，仍实际持有 body/collider/租约和GPU资源；TTL到期退役288租约，真实 World 仅剩4个独立静态镜像 body/collider。
-Reset 核旧 runtime/队列/租约/288句柄失效及 World 已释放。三模式与压力期间记录到的374个曾被碎片消费的实际 GPU 资源在 Stop 前后均各销毁一次；此集合含跨模式已退役项与被复用的 Play 材质，不能称作“同时驻留374个”或“全部都是碎片独占”。
+Reset 核旧 runtime/队列/租约/288句柄失效及真实 World.free 恰一次。随后两轮都从实际12活动块、16个World body/collider进入Stop，核旧runtime/句柄/World.free和GPU销毁；第二轮重新Play成功。
+三模式、压力与重开期间记录到的519个曾被碎片消费的实际 GPU 资源在 Stop 前后均各销毁一次；共享frame buffer销毁次数为0。
+此集合含跨模式已退役项与被复用的 Play 材质，不能称作“同时驻留519个”或“全部都是碎片独占”。
 
 ## 本轮实际验证与继承
 
@@ -97,7 +103,7 @@ Reset 核旧 runtime/队列/租约/288句柄失效及 World 已释放。三模�
 | `node tools/verify/wu06-destructible-probe.mjs --headed --out <独占目录>` | 43/43；原生武器/爆炸、碰撞与导航通路、Reset/Stop及受控失败。 |
 | `node tools/verify/wu07-npc-death-probe.mjs --headed --out <独占目录>` | 23/23；原生移动NPC致死、非bind、E01对照、Pause/Step及Stop。 |
 | `node tools/verify/wu08-author-probe.mjs --headed --out <独占目录>` | 48/48；原UI的Apply/历史/Save/full reload/CAS、源6515顶点连续性、实际Preview GPU释放及故障恢复。 |
-| `node tools/verify/wu09-fracture-probe.mjs --headed --out <独占目录>` | 21/21；三模式真实timestamp/上传、默认预算、队列、休眠/TTL/Reset/Stop。 |
+| `node tools/verify/wu09-fracture-probe.mjs --headed --out <独占目录>` | 24/24；三模式真实timestamp/上传、默认预算、队列、休眠/TTL/Reset/Stop。 |
 | `node tools/verify/wu09-physics-visual-probe.mjs --headed --out <独占目录>` | 20/20；同seed双来向轨迹、真实求解manifold、三轴姿态和同tick截图、原Reset按钮。 |
 
 五项浏览器路径均 strict TLS、DISPLAY1、实际 NVIDIA Lovelace 非 fallback，console/exception 为0。
@@ -117,6 +123,6 @@ CodeGraph 0.167.0 已先 project_map/指定模块，再核源码；预算截断�
 ## 冻结、审核与仍未完成的放行
 
 最终 source/input/raw/画面摘要、base..final 所属文件、提交链及远端一致性在开发会话冻结 manifest 中。
-历史失败尝试及探针修正日志保留在 `.workbuddy/tmp/wu09-review/`，最终测量使用 `cost-pressure-final` 与 `physics-visual-r2`，不是挑选旧失败断言重新计分。
+历史失败尝试及探针修正日志保留在 `.workbuddy/tmp/wu09-review/`，最终测量使用 `cost-pressure-release` 与 `physics-visual-r2`，不是挑选旧失败断言重新计分。
 主代理先停止 source/tests/docs/被测服务/fixture 写入，再启动全新独立、继承主对话模型且不传 model 覆盖、max 推理的整单 WU_ACCEPTANCE。
 独立通过后才向唯一 supervisor 报 WAITING_REVIEW；未经最终 exact APPROVED 不宣布九个 WU 全部完成。

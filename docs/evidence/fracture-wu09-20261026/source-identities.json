@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "e06306ce7819428220a08852e59d4b47a715aee8",
+  "sourceCommit": "61c038acd2b59274d898cd47aba81a0eb86a9bcd",
   "description": "交付源码与正式输入字节，审查时核当前Git树及磁盘。Native前后仅可选测量差异见指南。",
   "sha256": {
     "aether.project.json": "9670c8f4eaaf3bfef2e1fcb4a7edaf96b7edac6aeebe67483a51ebeb81f68173",
@@ -356,7 +356,7 @@
     "tools/verify/editor-smoke.mjs": "3bf3e19073603c5f39adbfc4cdb2628625fc36f05733e8f2e5c9a1faf32f732d",
     "tools/verify/facade-metric.py": "e541daa8dc38c44bd2985bb3646fd7c84ee8af1bc6b340c10e213f35712684fe",
     "tools/verify/fracture-assets-probe.mjs": "ef914a3b5473b259d315c4dfb9871b34f934c4255ede870084cc41b21644a0f3",
-    "tools/verify/fracture-measure.mjs": "29a43566f68b3f2c3d34286adb857a049640991ab744b8b0217168b5795b24ba",
+    "tools/verify/fracture-measure.mjs": "44cc9097933c9a42b426df6aa049b033cad3796f03b1b17eec7eac5b8fd01b45",
     "tools/verify/fracture-measure.test.mjs": "bc26a5553b4d0bd2c9bea6d17143fb0b95f63a0b3cc3404206111b59b16ee400",
     "tools/verify/game-probe-lib.mjs": "dbad8345c4498d256646af696e6ca5fdd9562a9bef56e594c48a5ce8838b4295",
     "tools/verify/game-probe-oracles.mjs": "a79b7aa39667a04ff4f4a27fd7b602b09d3e52ec9e969a8ce8e81e17e9abbfc8",
@@ -410,7 +410,7 @@
     "tools/verify/wu07-npc-death-probe.mjs": "87c621575515ed819c75a5642fe8746a73cb368321974603a50862e857f129a9",
     "tools/verify/wu08-admission-probe.mjs": "4550f07bce337f96ddad53078cf180bdf36dfd8c1cb888c483b41ea8d4d1ce32",
     "tools/verify/wu08-author-probe.mjs": "7c1fb93be77284a0e845cdfe1025b794aa1d2315f2c1df098e902842602c3002",
-    "tools/verify/wu09-fracture-probe.mjs": "b2feb6661aa0f02f39efbc076da6517b8ba884112439cdcbafb82ee44ce0f372",
+    "tools/verify/wu09-fracture-probe.mjs": "c668d1763c38edb0bd8988f2319a306afa23963e50974a2927f956c2ceeebcb8",
     "tools/verify/wu09-physics-visual-probe.mjs": "7150e0bf3b78c2f3afa174fe15522d91aa3dc82d356f1825b19f57d7d7f07b57"
   }
 }
