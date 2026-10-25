@@ -41,7 +41,7 @@ beforeAll(async () => {
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
-it('WU09可选CPU观测不改变正式激活/IO；准入失败重置旧测量且不产生激活',async()=>{
+it('WU09可选CPU观测不改变正式激活；准入失败重置旧测量且不产生激活',async()=>{
   const io=makeIO(),profile=JSON.parse(await io.readText(P01)),event=ev(P01,profile.id);
   const measurements={admissionWallMs:-1,chunkDecodeCpuMs:-1,poseBakeCpuMs:-1,planningCpuMs:-1};
   const plain=await prepareFractureActivation(event,{io});
@@ -470,10 +470,16 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
 
   it('E-04 正式 NPC profile 准入成功：3 大 7 小分层（走 NPC 身份链）', async () => {
     // NPC 事件目标带 slot/id/generation：同一次激活的句柄代次必须能区分回收后的新实体。
-    const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
+    const event = ev(E04, 'as_e04frct', {
       target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 },
       npcPose: e04Pose(() => [...IDENTITY16]),
-    }), { io: makeIO() });
+    });
+    const io=makeIO(),measurements={admissionWallMs:0,chunkDecodeCpuMs:0,poseBakeCpuMs:0,planningCpuMs:0};
+    const r = await prepareFractureActivation(event, { io, measurements });
+    expect(r).toEqual(await prepareFractureActivation(event,{io}));
+    expect(Object.values(measurements).every(v=>Number.isFinite(v)&&v>=0)).toBe(true);
+    expect(measurements.poseBakeCpuMs).toBeGreaterThan(0);
+    expect(measurements.chunkDecodeCpuMs).toBeGreaterThan(0);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.activation.chunks.filter((c) => c.cls === 'large').length).toBe(3);
