@@ -3,6 +3,8 @@ export function installFractureMeasure() {
  const e=window.__editor,core=e.renderer.core,d=core.device;
  const original={createBuffer:d.createBuffer,createTexture:d.createTexture,write:d.queue.writeBuffer,copy:d.queue.copyExternalImageToTexture,draw:core.drawFrame,encoder:d.createCommandEncoder};
  const resources=[],writes=[],copies=[];let frame=0;
+ const sharedFrame=core.frameBuf,sharedDestroy=sharedFrame?.destroy;let sharedFrameDestroyCalls=0;
+ if(sharedFrame)sharedFrame.destroy=function(){sharedFrameDestroyCalls++;return sharedDestroy.call(this);};
  function track(r,kind,desc){const row={r,kind,label:desc.label??'',size:kind==='buffer'?r.size:null,width:r.width,height:r.height,mips:r.mipLevelCount,format:r.format,destroyCalls:0};const destroy=r.destroy;r.destroy=function(){row.destroyCalls++;return destroy.call(this);};resources.push(row);return r;}
  d.createBuffer=function(desc){return track(original.createBuffer.call(this,desc),'buffer',desc);};
  d.createTexture=function(desc){return track(original.createTexture.call(this,desc),'texture',desc);};
@@ -13,7 +15,7 @@ export function installFractureMeasure() {
   const i=(window.__fractureMeasure.lastInput?.dynamicBatches??[]).findIndex(x=>x.meshId===b.meshId&&x.indexStart===b.indexStart&&x.indexCount===b.indexCount),s=core.dynamicInstSlots[i];if(s)for(const n of ['buf','poseBuf','rigidBuf'])refs.add(s[n]);
   const material=b.textureKey?core.dynamicMaterials.get(b.textureKey):null;if(material)refs.add(material.texture);
  }return refs;}
- function snapshot(){const refs=own();return {resources:resources.map((x,i)=>{if(refs.has(x.r))x.fracture=true;return {id:i,kind:x.kind,label:x.label,size:x.size,width:x.width,height:x.height,mips:x.mips,format:x.format,destroyCalls:x.destroyCalls,fracture:x.fracture===true};}),writeBytes:writes.reduce((n,x)=>n+x.bytes,0),externalImageBytes:copies.reduce((n,x)=>n+x.bytes,0)};}
+ function snapshot(){const refs=own();return {sharedFrameDestroyCalls,resources:resources.map((x,i)=>{if(refs.has(x.r))x.fracture=true;return {id:i,kind:x.kind,label:x.label,size:x.size,width:x.width,height:x.height,mips:x.mips,format:x.format,destroyCalls:x.destroyCalls,fracture:x.fracture===true};}),writeBytes:writes.reduce((n,x)=>n+x.bytes,0),externalImageBytes:copies.reduce((n,x)=>n+x.bytes,0)};}
  let pending=null;
  async function sample(){
   if(pending)throw Error('已有未完成帧');
@@ -50,7 +52,7 @@ export function installFractureMeasure() {
    };
   });
  }
- window.__fractureMeasure={resources,writes,copies,lastInput:null,sample,snapshot,restore(){pending?.cancel();core.drawFrame=original.draw;d.createCommandEncoder=original.encoder;d.createBuffer=original.createBuffer;d.createTexture=original.createTexture;d.queue.writeBuffer=original.write;d.queue.copyExternalImageToTexture=original.copy;}};
+ window.__fractureMeasure={resources,writes,copies,lastInput:null,sample,snapshot,restore(){pending?.cancel();core.drawFrame=original.draw;d.createCommandEncoder=original.encoder;d.createBuffer=original.createBuffer;d.createTexture=original.createTexture;d.queue.writeBuffer=original.write;d.queue.copyExternalImageToTexture=original.copy;if(sharedFrame)sharedFrame.destroy=sharedDestroy;}};
  return {timestamp:d.features.has('timestamp-query')};
 }
 
