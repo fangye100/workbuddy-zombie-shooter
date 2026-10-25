@@ -3427,6 +3427,27 @@
         "scene-schema",
         "architecture-policy"
       ]
+    },
+    {
+      "id": "fracture-requirements-matrix",
+      "path": "docs/architecture/fracture-requirements-matrix-20261026.md",
+      "title": "碎裂系统需求矩阵与后续开发依据",
+      "role": "validation",
+      "authority": "guide",
+      "status": "current",
+      "read": "按稳定需求ID说明用户意义、责任/数据真源、验收标准、W09原始12项、证据追踪与首期/后续范围边界，作为后续开发和审核依据。",
+      "topics": [
+        "fracture",
+        "requirements",
+        "matrix",
+        "WU-09"
+      ],
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy",
+        "asset-metadata"
+      ]
     }
   ]
 }

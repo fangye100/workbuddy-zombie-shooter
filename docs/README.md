@@ -31,6 +31,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 离线预破碎与实时刚体碎片（逐单元审核） | [开发技术计划](architecture/fracture-system-development-plan-20261020.md) | 正式预破碎资产、真实三维物理、物体/NPC 接入、九个串行 WU；按 WU 逐项批准，实际能力见已发布指南与对应批准记录，设计不等于实现 |
 | 碎裂作者配置、Preview 与持久化 | [WU-08 操作及证据](architecture/fracture-authoring-20261022.md) | 原组件/资产 Inspector、独立真物理/GPU Preview、原历史与 CAS；最终放行以冻结提交审核为准 |
 | 碎裂联合运行、成本与交付边界 | [WU-09 运行与测量](architecture/fracture-delivery-20261026.md) | 两例正式用户路径、三模式实测、预算/实际资源释放、原能力继承与最终审核边界 |
+| 碎裂系统需求追踪与后续开发 | [需求矩阵与开发依据](architecture/fracture-requirements-matrix-20261026.md) | 产品需求的意义/责任/验收、原W09-01..12矩阵、证据入口与后续范围边界 |
 | 实际 Act1 三层 VFX 试玩 | [实战接入与操作](animation/vfx-gameplay-integration.md) | 1–7 换枪、第二层酸液清波与第三层爆尸原路进入、真实阶段/回收/坏资源保底验证及限制 |
 | 敌人与地面 VFX | [M2 实现与验证](architecture/vfx-m2-20261019.md) | 通用标签绑定、v16/v2 兼容、真实敌人事实与平面 GPU、持久化及失败保底 |
 | 持续与动作 VFX、M4 决策 | [M3 实现与验证](architecture/vfx-m3-20261019.md) | 固定tick/seed发射器、曲线作者流程、真实火焰/烟尘/火花/冲锋/近战与预算测量 |

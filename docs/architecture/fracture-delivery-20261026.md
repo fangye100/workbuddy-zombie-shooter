@@ -117,7 +117,8 @@ Reset 核旧 runtime/队列/租约/288句柄失效及真实 World.free 恰一次
 原 Editor 剪贴板两项仍 FAIL，保留其原始记录与宿主界定；本 WU 不认证当前复制可用。历史错误夹具、准入反例、未测自然 blocked 酸液及其他未认证组合不改写为通过。
 
 门禁：typecheck、editor:build、architecture:check、scene:check 已实际通过；后续新增工具再按冻结结果核架构文件数。
-工作区 knowledge:check 的8项并发旧目录错误保留。交付目录从 HEAD 的正确 catalog 局部追加，通过精确 Git tree 的原 validateCatalog 验证，不覆盖并发工作区文件。
+初始工作区 knowledge:check 的8项并发旧目录错误保留；新增[需求矩阵](fracture-requirements-matrix-20261026.md)后，旧工作区目录还会缺该条目。
+需求矩阵与本指南共同作为后续开发入口；交付目录从 HEAD 的正确 catalog 局部追加，精确 staged tree 已核188条目/161份文档/0错误，不覆盖并发工作区文件。
 CodeGraph 0.167.0 已先 project_map/指定模块，再核源码；预算截断、未解析/损坏解析文件及非完整向量索引不作为完整架构或运行成本证据。
 
 ## 冻结、审核与仍未完成的放行
