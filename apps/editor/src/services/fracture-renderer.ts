@@ -97,19 +97,19 @@ export class PlayFractureRenderer {
   /** 已加载网格数 / 最近一次同步的实例数与三角形数（供验收观察）。 */
   readonly stats = {
     meshes: 0, instances: 0, triangles: 0, textures: 0,
-    /** GPU 顶点+索引+全零 skin slot 的提交字节。 */
+    /** CPU 已准备的顶点+索引+skin 字节（累计；实际 GPU 写入由 core 执行）。 */
     geometryBytes: 0,
     /** 贴图源文件编码字节（仅文件 IO，不是 GPU 量）。 */
     textureFileBytes: 0,
-    /** 贴图解码基础级 RGBA8 提交字节。 */
+    /** CPU 已准备的贴图基础级 RGBA8 字节（累计；不代表已上传）。 */
     textureUploadBytes: 0,
-    /** 贴图基础级 + mip 链的 GPU 驻留字节。 */
+    /** 已准备贴图的基础级 + mip 链逻辑字节估计，不是实测 GPU 驻留。 */
     textureResidentBytes: 0,
-    /** 实际 GPU 提交量 = geometryBytes + textureUploadBytes。 */
+    /** 累计 CPU 准备量 = geometryBytes + textureUploadBytes，不是实际 GPU 上传。 */
     uploadBytes: 0,
-    /** 实际 GPU 驻留量 = geometryBytes + textureResidentBytes。 */
+    /** 累计准备资源的逻辑字节估计；不含实际存活/销毁或 GPU 分配余量。 */
     residentBytes: 0,
-    /** 本帧实例行 + 刚体基向量的写入字节。 */
+    /** 本次 sync 准备的实例行 + 刚体基向量字节；不代表 core 成功写入。 */
     instanceBytes: 0,
   };
 
@@ -140,6 +140,7 @@ export class PlayFractureRenderer {
     this.batches = [];
     this.stats.instances = 0;
     this.stats.triangles = 0;
+    this.stats.instanceBytes = 0;
     if (runtime === null) return;
     const active = runtime.active;
     if (active.length === 0) return;

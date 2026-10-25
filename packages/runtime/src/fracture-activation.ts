@@ -95,6 +95,13 @@ export interface ConvexPointsResolver {
 
 export interface PrepareOptions {
   readonly io: FractureAssetIO;
+  /** 可选观测接收器；准入含异步IO的墙钟与之后的同步CPU分开，不参与激活数据。 */
+  readonly measurements?: {
+    admissionWallMs: number;
+    chunkDecodeCpuMs: number;
+    poseBakeCpuMs: number;
+    planningCpuMs: number;
+  };
   /** 作者未保存配方；磁盘源/sidecar仍先重新准入，草稿不能绕过隔离与身份。 */
   readonly draftProfile?: FractureAsset;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
@@ -389,8 +396,13 @@ export async function prepareFractureActivation(
   event: FractureEvent,
   opts: PrepareOptions,
 ): Promise<FracturePrepareResult> {
+  const measurements=opts.measurements;
+  const admissionStart=measurements?performance.now():0;
+  if(measurements)Object.assign(measurements,{admissionWallMs:0,chunkDecodeCpuMs:0,poseBakeCpuMs:0,planningCpuMs:0});
   const admitted=await admitFractureProfile(event.profile,opts.io,opts.draftProfile,opts.resolveConvexPoints);
+  if(measurements)measurements.admissionWallMs=performance.now()-admissionStart;
   if(!admitted.ok)return admitted;
+  const planningStart=measurements?performance.now():0;
   const {profile,binaries:currentBinaries,convexPoints:currentConvexPoints}=admitted;
   const wantNpc=profile.kind==='npc';
   if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
@@ -428,10 +440,13 @@ export async function prepareFractureActivation(
     let worldScale: number;
     if (wantNpc) {
       let parsed: ReturnType<typeof parseGlb>;
+      const decodeStart=measurements?performance.now():0;
       try {
         parsed = parseGlb(currentBinaries!.get(c.mesh.path)!, null, 'auto', { normalize: false });
       } catch (e) {
         return { ok: false, failure: { stage: 'ref-binary', detail: 'NPC 碎块 ' + c.chunkId + ' GLB 解析失败：' + String(e) } };
+      } finally {
+        if(measurements)measurements.chunkDecodeCpuMs+=performance.now()-decodeStart;
       }
       const sk = parsed.skeleton;
       if (!sk || sk.jointNames.length !== sk.joints.length || !parsed.mesh.joints || !parsed.mesh.weights) {
@@ -448,11 +463,14 @@ export async function prepareFractureActivation(
         }
       }
       // parseGlb 为未蒙皮 primitive 使用末尾恒等关节，与正常渲染一致。
-      const palette = paletteForNamedPose(sk.jointNames,event.npcPose!);
+      const bakeStart=measurements?performance.now():0;
       try {
+        const palette = paletteForNamedPose(sk.jointNames,event.npcPose!);
         bakedVertices = bakeSkinVertices(parsed.mesh, palette, event.npcNormalization!);
       } catch (e) {
         return { ok: false, failure: { stage: 'pose-invalid', detail: 'NPC 碎块 ' + c.chunkId + ' 蒙皮烘焙失败：' + String(e) } };
+      } finally {
+        if(measurements)measurements.poseBakeCpuMs+=performance.now()-bakeStart;
       }
       const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
       for (let v = 0; v < bakedVertices.length; v += VERTEX_FLOATS) {
@@ -558,6 +576,7 @@ export async function prepareFractureActivation(
     });
   }
 
+  if(measurements)measurements.planningCpuMs=Math.max(0,performance.now()-planningStart-measurements.chunkDecodeCpuMs-measurements.poseBakeCpuMs);
   return {
     ok: true,
     activation: {

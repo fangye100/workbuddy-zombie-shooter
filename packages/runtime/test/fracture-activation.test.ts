@@ -41,6 +41,20 @@ beforeAll(async () => {
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
+it('WU09可选CPU观测不改变正式激活/IO；准入失败重置旧测量且不产生激活',async()=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)),event=ev(P01,profile.id);
+  const measurements={admissionWallMs:-1,chunkDecodeCpuMs:-1,poseBakeCpuMs:-1,planningCpuMs:-1};
+  const plain=await prepareFractureActivation(event,{io});
+  const measured=await prepareFractureActivation(event,{io,measurements});
+  expect(measured).toEqual(plain);expect(measured.ok).toBe(true);
+  expect(measurements.admissionWallMs).toBeGreaterThanOrEqual(0);
+  expect(measurements.planningCpuMs).toBeGreaterThanOrEqual(0);
+  expect(measurements.poseBakeCpuMs).toBe(0);expect(measurements.chunkDecodeCpuMs).toBe(0);
+  measurements.poseBakeCpuMs=999;measurements.planningCpuMs=999;
+  const failed=await prepareFractureActivation({...event,profile:{...event.profile,guid:'wrong'}},{io,measurements});
+  expect(failed.ok).toBe(false);expect(measurements.planningCpuMs).toBe(0);expect(measurements.poseBakeCpuMs).toBe(0);
+});
+
 it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range','nan','infinity','normal-fallback','zero-unused','identity-tail'].map(mode=>[role,mode])))
 ('WU08 F08-07：真实NPC %s 的 %s 蒙皮输入沿同一静态合同准入/拒绝并恢复',async(role,mode)=>{
   const io=makeIO(),profile=e04Profile(),ref={path:E04,guid:profile.id};

@@ -140,7 +140,19 @@ describe('WU-05 碎片动态批次装配', () => {
     expect(world[1]).toBeCloseTo(5, 4);
     expect(world[2]).toBeCloseTo(3, 4);
     expect((batch.instances[14] ?? 0) & 2).toBe(2);
+    // 有数据后变为空帧/解绑：必须撤下批次并清零本帧准备量，不能沿用上一帧。
+    expect(renderer.stats.instanceBytes).toBe(128);
+    renderer.sync(null, null);
+    expect(renderer.stats.instanceBytes).toBe(0);
+    expect(renderer.dynamicBatches).toEqual([]);
+    renderer.sync(rt, backend);
+    expect(renderer.stats.instanceBytes).toBe(128);
     rt.dispose();
+    renderer.sync(rt, backend);
+    expect(renderer.dynamicBatches).toEqual([]);
+    expect(renderer.stats.instances).toBe(0);
+    expect(renderer.stats.triangles).toBe(0);
+    expect(renderer.stats.instanceBytes).toBe(0);
     renderer.dispose();
   }, 30000);
 
