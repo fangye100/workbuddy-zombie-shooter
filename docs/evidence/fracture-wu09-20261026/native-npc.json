@@ -1,0 +1,533 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu07.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu07.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "window": {
+      "left": 1920,
+      "top": 80,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "camera": {
+      "before": {
+        "yaw": 0,
+        "distance": 12,
+        "target": [
+          0,
+          1.4,
+          3.5
+        ],
+        "observing": false,
+        "tick": 0
+      },
+      "orbit": {
+        "yaw": -0.48,
+        "distance": 12,
+        "target": [
+          0,
+          1.4,
+          3.5
+        ],
+        "observing": true,
+        "tick": 0
+      },
+      "pan": {
+        "yaw": -0.48,
+        "distance": 12,
+        "target": [
+          -0.2805436916947681,
+          1.5818951579289062,
+          3.1818725932488023
+        ],
+        "observing": true,
+        "tick": 0
+      },
+      "zoom": {
+        "yaw": -0.48,
+        "distance": 9.90368242190019,
+        "target": [
+          -0.2805436916947681,
+          1.5818951579289062,
+          3.1818725932488023
+        ],
+        "observing": true,
+        "tick": 0
+      },
+      "restored": {
+        "yaw": 0,
+        "distance": 12,
+        "target": [
+          0,
+          1.4,
+          3.5
+        ],
+        "observing": false,
+        "tick": 0
+      }
+    },
+    "initial": {
+      "e04Cfg": "{\"profile\":{\"path\":\"assets/fracture/e04-bulwark/e04-bulwark.fracture.json\",\"guid\":\"as_e04frct\"}}",
+      "e01Cfg": "null",
+      "npc": [
+        {
+          "c": "E-04",
+          "hp": 220
+        },
+        {
+          "c": "E-01",
+          "hp": 60
+        }
+      ],
+      "player": 100,
+      "batches": 0,
+      "error": null
+    },
+    "contrastEarly": {
+      "plain01": {
+        "outcome": "dead",
+        "rounds": 1
+      },
+      "contrastEarly": {
+        "active": 0,
+        "queued": 0,
+        "error": null
+      }
+    },
+    "playerHpAfterKill04": 100,
+    "kill04": {
+      "outcome": "dead",
+      "rounds": 3
+    },
+    "e04Move": {
+      "spawn": {
+        "id": 1,
+        "generation": 1,
+        "runId": 1,
+        "x": 2.1527652740478516,
+        "y": 0,
+        "z": -4.9208664894104,
+        "behavior": 2,
+        "hp": 220
+      },
+      "last": {
+        "id": 1,
+        "generation": 1,
+        "runId": 1,
+        "x": 0.7902349829673767,
+        "y": 0,
+        "z": -0.6670891046524048,
+        "behavior": 1,
+        "hp": 10
+      },
+      "displacement": 4.466666635556141
+    },
+    "deathSuppressed": {
+      "count": 0,
+      "batches": 1
+    },
+    "fragments": {
+      "batches": 20,
+      "rows": [
+        [
+          0.8678459385333839,
+          0.31215107277272935,
+          -0.5260983679092632
+        ],
+        [
+          0.9018949624682989,
+          0.460325142765545,
+          -0.6584176006934385
+        ],
+        [
+          1.1059372582855447,
+          0.47181013576726405,
+          -0.613992051427402
+        ],
+        [
+          1.3202642843246908,
+          0.4566697598071081,
+          -0.5114617549302072
+        ],
+        [
+          0.5464299601501953,
+          0.3707507282531096,
+          -0.44031240462965426
+        ],
+        [
+          0.46713751013036386,
+          0.4155641629632745,
+          -0.4286363268706763
+        ],
+        [
+          1.0379917626892197,
+          0.5831935970985657,
+          -0.6714096067899545
+        ],
+        [
+          1.253681000391984,
+          0.2948072278653209,
+          -0.8660329079794784
+        ],
+        [
+          0.5625450132486332,
+          0.5679244894305882,
+          -0.41301887631094847
+        ],
+        [
+          0.4869618834234167,
+          0.3032704821626495,
+          -0.42562845131053373
+        ]
+      ],
+      "initial": [
+        {
+          "id": "head",
+          "position": [
+            0.8568984891846374,
+            1.6166078448295593,
+            -0.33943130068211813
+          ],
+          "radius": 0.2885860800743103
+        },
+        {
+          "id": "torso",
+          "position": [
+            0.8846162655882064,
+            1.2107121646404266,
+            -0.5092204410078999
+          ],
+          "radius": 0.46156933903694153
+        },
+        {
+          "id": "arm-l-upper",
+          "position": [
+            1.125100860712773,
+            1.3816238939762115,
+            -0.4795875662734959
+          ],
+          "radius": 0.47020217776298523
+        },
+        {
+          "id": "arm-l-forearm",
+          "position": [
+            1.2913290091216818,
+            1.416642963886261,
+            -0.34728043582841617
+          ],
+          "radius": 0.45666974782943726
+        },
+        {
+          "id": "arm-r-upper",
+          "position": [
+            0.5334254380413255,
+            1.3801231980323792,
+            -0.3590608929075314
+          ],
+          "radius": 0.346365749835968
+        },
+        {
+          "id": "arm-r-forearm",
+          "position": [
+            0.3393380443286789,
+            1.310328483581543,
+            -0.1403342242027158
+          ],
+          "radius": 0.4155641794204712
+        },
+        {
+          "id": "leg-l-thigh",
+          "position": [
+            1.097597758677754,
+            0.928124412894249,
+            -0.4880909238233205
+          ],
+          "radius": 0.583250418305397
+        },
+        {
+          "id": "leg-l-shin",
+          "position": [
+            1.2532761865472417,
+            0.21597352251410484,
+            -0.8564185585343556
+          ],
+          "radius": 0.29480722919106483
+        },
+        {
+          "id": "leg-r-thigh",
+          "position": [
+            0.4728809146787443,
+            0.9137139469385147,
+            -0.3462980783610423
+          ],
+          "radius": 0.5679799169301987
+        },
+        {
+          "id": "leg-r-shin",
+          "position": [
+            0.4788686461471592,
+            0.2194218412041664,
+            -0.4184237942607778
+          ],
+          "radius": 0.30327048152685165
+        }
+      ]
+    },
+    "after04": {
+      "active": 10,
+      "queued": 0,
+      "error": null
+    },
+    "alignment": {
+      "matched": 10,
+      "error": 2.9181761118657334e-8
+    },
+    "reset": {
+      "npc": [
+        {
+          "c": "E-04",
+          "hp": 220
+        },
+        {
+          "c": "E-01",
+          "hp": 60
+        }
+      ],
+      "active": 0,
+      "batches": 0,
+      "error": null
+    },
+    "resetReleased": {
+      "disposed": true,
+      "active": 0,
+      "pool": 0,
+      "ledger": {
+        "dynamicBodies": 0,
+        "staticColliders": 0,
+        "ticks": 236,
+        "destroyed": true
+      },
+      "newRuntime": true
+    },
+    "stopped": {
+      "pending": 0,
+      "state": "stopped"
+    },
+    "shots": [
+      {
+        "key": "E-01:0",
+        "fired": true,
+        "proj": {
+          "x": 563.6927250329039,
+          "y": 192.95635833808535,
+          "behind": false
+        },
+        "aim": [
+          -1.7161392349354794,
+          -4.993510594920542
+        ],
+        "hpBefore": 60,
+        "hpAfter": null,
+        "npc": null,
+        "player": 100
+      },
+      {
+        "key": "E-04:0",
+        "fired": true,
+        "proj": {
+          "x": 736.0570524301785,
+          "y": 194.09605654076722,
+          "behind": false
+        },
+        "aim": [
+          2.1527550422252477,
+          -4.92072727208193
+        ],
+        "hpBefore": 220,
+        "hpAfter": 150,
+        "npc": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "x": 0.7902349829673767,
+          "y": 0,
+          "z": -0.6670891046524048,
+          "behavior": 4,
+          "hp": 150
+        },
+        "player": 100
+      },
+      {
+        "key": "E-04:1",
+        "fired": true,
+        "proj": {
+          "x": 684.3584698136644,
+          "y": 278.1843108945089,
+          "behind": false
+        },
+        "aim": [
+          0.7902317261762809,
+          -0.6669955051648486
+        ],
+        "hpBefore": 150,
+        "hpAfter": 10,
+        "npc": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "x": 0.7902349829673767,
+          "y": 0,
+          "z": -0.6670891046524048,
+          "behavior": 1,
+          "hp": 10
+        },
+        "player": 100
+      },
+      {
+        "key": "E-04:2",
+        "fired": true,
+        "proj": {
+          "x": 684.3584698136644,
+          "y": 278.1843108945089,
+          "behind": false
+        },
+        "aim": [
+          0.7902317261762809,
+          -0.6669955051648486
+        ],
+        "hpBefore": 10,
+        "hpAfter": null,
+        "npc": null,
+        "player": 100
+      }
+    ]
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "验证窗口固定在 DISPLAY1",
+      "ok": true,
+      "detail": "{\"left\":1920,\"top\":80,\"width\":1280,\"height\":800,\"windowState\":\"normal\"}"
+    },
+    {
+      "name": "WU-07 场景由原场景选择器可达",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Pause 观察视角原生环绕/平移/缩放且不推进模拟",
+      "ok": true,
+      "detail": "{\"before\":{\"yaw\":0,\"distance\":12,\"target\":[0,1.4,3.5],\"observing\":false,\"tick\":0},\"orbit\":{\"yaw\":-0.48,\"distance\":12,\"target\":[0,1.4,3.5],\"observing\":true,\"tick\":0},\"pan\":{\"yaw\":-0.48,\"distance\":12,\"target\":[-0.2805436916947681,1.5818951579289062,3.1818725932488023],\"observing\":true,\"tick\":0},\"zoom\":{\"yaw\":-0.48,\"distance\":9.90368242190019,\"target\":[-0.2805436916947681,1.5818951579289062,3.1818725932488023],\"observing\":true,\"tick\":0}}"
+    },
+    {
+      "name": "退出观察回到原游戏相机",
+      "ok": true,
+      "detail": "{\"yaw\":0,\"distance\":12,\"target\":[0,1.4,3.5],\"observing\":false,\"tick\":0}"
+    },
+    {
+      "name": "E-04 刷怪点携带 deathFracture、E-01 对照未配置",
+      "ok": true,
+      "detail": "{\"e04\":\"{\\\"profile\\\":{\\\"path\\\":\\\"assets/fracture/e04-bulwark/e04-bulwark.fracture.json\\\",\\\"guid\\\":\\\"as_e04frct\\\"}}\",\"e01\":\"null\"}"
+    },
+    {
+      "name": "两个 NPC 装载（E-04 hp220 + E-01）",
+      "ok": true,
+      "detail": "[{\"c\":\"E-04\",\"hp\":220},{\"c\":\"E-01\",\"hp\":60}]"
+    },
+    {
+      "name": "原生数字键切到 sniper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "对照 E-01 普通死亡：不触发碎裂、无诊断",
+      "ok": true,
+      "detail": "{\"plain01\":{\"outcome\":\"dead\",\"rounds\":1},\"contrastEarly\":{\"active\":0,\"queued\":0,\"error\":null}}"
+    },
+    {
+      "name": "原生狙击真实致死 E-04 并激活 10 块（3 大 7 小）",
+      "ok": true,
+      "detail": "{\"kill04\":{\"outcome\":\"dead\",\"rounds\":3},\"killed04\":{\"active\":10,\"rigid\":3,\"queued\":0,\"error\":null,\"gpu\":10,\"corpse\":0}}"
+    },
+    {
+      "name": "致死碎裂无诊断错误",
+      "ok": true,
+      "detail": "null"
+    },
+    {
+      "name": "E-04 在冲锋/行进途中被击杀（非 bind 的活体姿态）",
+      "ok": true,
+      "detail": "{\"spawn\":{\"id\":1,\"generation\":1,\"runId\":1,\"x\":2.1527652740478516,\"y\":0,\"z\":-4.9208664894104,\"behavior\":2,\"hp\":220},\"last\":{\"id\":1,\"generation\":1,\"runId\":1,\"x\":0.7902349829673767,\"y\":0,\"z\":-0.6670891046524048,\"behavior\":1,\"hp\":10},\"displacement\":4.466666635556141}"
+    },
+    {
+      "name": "成功接管抑制该身份死亡尾部（E-04 批次 0 实例）",
+      "ok": true,
+      "detail": "{\"count\":0,\"batches\":1}"
+    },
+    {
+      "name": "碎块在死亡位置接管（非原点/bind）",
+      "ok": true,
+      "detail": "[[0.8678459385333839,0.31215107277272935,-0.5260983679092632],[0.9018949624682989,0.460325142765545,-0.6584176006934385],[1.1059372582855447,0.47181013576726405,-0.613992051427402],[1.3202642843246908,0.4566697598071081,-0.5114617549302072]]"
+    },
+    {
+      "name": "对照 E-01 无新增碎片（仅 E-04 的 10 块）",
+      "ok": true,
+      "detail": "{\"active\":10,\"queued\":0,\"error\":null}"
+    },
+    {
+      "name": "Pause 冻结真实碎片时钟",
+      "ok": true,
+      "detail": "235"
+    },
+    {
+      "name": "原生 Step 恰推进一次碎片固定步",
+      "ok": true,
+      "detail": "{\"frozen\":235,\"stepped\":236}"
+    },
+    {
+      "name": "同帧真实后端/简化位置与原动态 GPU 实例/pivot 一致",
+      "ok": true,
+      "detail": "{\"matched\":10,\"error\":2.9181761118657334e-8}"
+    },
+    {
+      "name": "Reset 恢复两个 NPC 与干净碎片态",
+      "ok": true,
+      "detail": "{\"npc\":[{\"c\":\"E-04\",\"hp\":220},{\"c\":\"E-01\",\"hp\":60}],\"active\":0,\"batches\":0,\"error\":null}"
+    },
+    {
+      "name": "Reset 核旧 runtime/租约/真实后端已释放并换新代",
+      "ok": true,
+      "detail": "{\"disposed\":true,\"active\":0,\"pool\":0,\"ledger\":{\"dynamicBodies\":0,\"staticColliders\":0,\"ticks\":236,\"destroyed\":true},\"newRuntime\":true}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":9,\"disposed\":9,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":5,\"afterObjects\":5,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":9,\"disposed\":9,\"pending\":0}"
+    },
+    {
+      "name": "Stop 后资源账目归零",
+      "ok": true,
+      "detail": "{\"pending\":0,\"state\":\"stopped\"}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

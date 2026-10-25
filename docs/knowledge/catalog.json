@@ -3407,6 +3407,26 @@
       ],
       "reviewedAt": "2026-10-22",
       "reviewedSourceCommit": "5424055a4f81362a483efc73ea3ef8f2c63fc527"
+    },
+    {
+      "id": "fracture-delivery-wu09",
+      "path": "docs/architecture/fracture-delivery-20261026.md",
+      "title": "碎裂系统联合运行、成本与交付边界（WU-09）",
+      "role": "validation",
+      "authority": "guide",
+      "status": "current",
+      "read": "两例正式用户路径、同输入三模式CPU/GPU测量、默认预算和实际资源释放、原功能继承及独立/监督放行边界；不把开发自验升格为最终批准。",
+      "topics": [
+        "fracture",
+        "WU-09",
+        "GPU",
+        "budget",
+        "lifecycle"
+      ],
+      "sourceRefs": [
+        "scene-schema",
+        "architecture-policy"
+      ]
     }
   ]
 }
